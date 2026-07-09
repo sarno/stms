@@ -11,6 +11,11 @@ const router = createRouter({
       meta: { guest: true },
     },
     {
+      path: '/verifikasi',
+      name: 'verify-public-home',
+      component: () => import('@/views/verification/PublicVerifyView.vue'),
+    },
+    {
       path: '/verify/:token',
       name: 'verify-public',
       component: () => import('@/views/verification/PublicVerifyView.vue'),
@@ -42,6 +47,9 @@ const router = createRouter({
         { path: 'curriculum', name: 'curriculum', component: () => import('@/views/masterdata/CurriculumView.vue') },
         { path: 'subjects', name: 'subjects', component: () => import('@/views/masterdata/SubjectsView.vue') },
         { path: 'cert-templates', name: 'cert-templates', component: () => import('@/views/masterdata/CertTemplatesView.vue') },
+        { path: 'finance-rates', name: 'finance-rates', component: () => import('@/views/finance/ServiceRatesView.vue') },
+        { path: 'finance-payments', name: 'finance-payments', component: () => import('@/views/finance/PaymentVerificationView.vue') },
+        { path: 'finance-reports', name: 'finance-reports', component: () => import('@/views/finance/FinanceReportsView.vue') },
         { path: 'reports', name: 'reports', component: () => import('@/views/system/ReportsView.vue') },
         { path: 'users', name: 'users', component: () => import('@/views/system/UsersView.vue') },
         { path: 'roles', name: 'roles', component: () => import('@/views/system/RolesView.vue') },

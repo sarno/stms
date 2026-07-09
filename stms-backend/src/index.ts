@@ -5,12 +5,13 @@ import { join } from "path";
 import { authRoutes } from "./domains/Auth";
 import { registrationRoutes } from "./domains/Registration";
 import { gradingRoutes } from "./domains/Grading";
-import { certRoutes, verificationRoutes, certificateListRoutes, graduationRoutes, waStatusRoutes } from "./domains/Cert_Engine";
+import { certRoutes, verificationRoutes, graduationRoutes, waStatusRoutes } from "./domains/Cert_Engine";
 import { poldaRoutes } from "./domains/Training";
 import { batchRoutes, userRoutes, auditRoutes } from "./domains/Training/crud";
 import { masterdataRoutes } from "./domains/Training/masterdata";
 import { attendanceRoutes, scheduleRoutes } from "./domains/Training/attendance";
 import { dashboardRoutes } from "./domains/Training/dashboard";
+import { financeRoutes } from "./domains/Finance";
 
 export const app = new Elysia()
   .use(jwt({ name: "jwt", secret: process.env.JWT_SECRET || "stms-jwt-secret-dev-2026" }))
@@ -19,7 +20,6 @@ export const app = new Elysia()
   .use(registrationRoutes)
   .use(gradingRoutes)
   .use(certRoutes)
-  .use(certificateListRoutes)
   .use(verificationRoutes)
   .use(graduationRoutes)
   .use(waStatusRoutes)
@@ -31,6 +31,7 @@ export const app = new Elysia()
   .use(attendanceRoutes)
   .use(scheduleRoutes)
   .use(dashboardRoutes)
+  .use(financeRoutes)
   .get("/storage/uploads/*", async ({ params, set }) => {
     const filePath = join(process.cwd(), "storage", "uploads", params["*"]);
     const file = Bun.file(filePath);

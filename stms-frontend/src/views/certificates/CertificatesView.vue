@@ -22,6 +22,10 @@
           </button>
         </div>
 
+        <p v-if="flashMessage" class="text-xs text-emerald-600 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2 flex items-center gap-1.5">
+          <CheckCircle :size="13" /> {{ flashMessage }}
+        </p>
+
         <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
           <div v-if="loading" class="flex items-center justify-center py-16">
             <div class="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
@@ -216,12 +220,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import axios from 'axios'
 import StatCard from '@/components/ui/StatCard.vue'
 import { usePagination } from '@/composables/usePagination'
 import Pagination from '@/components/ui/Pagination.vue'
-import { Award, Printer, RefreshCw, ScanLine, Clock, Search, Plus, Eye, Download, QrCode, X, Shield } from 'lucide-vue-next'
+import { Award, Printer, RefreshCw, ScanLine, Clock, Search, Plus, Eye, Download, QrCode, X, Shield, CheckCircle } from 'lucide-vue-next'
 
 interface Cert {
   id: string
@@ -244,6 +248,7 @@ const showGenerate = ref(false)
 const submitting = ref(false)
 const modalError = ref('')
 const genSuccess = ref('')
+const flashMessage = ref('')
 const genBatchId = ref('')
 const certPrefix = ref('CERT-2024')
 const gradSearch = ref('')
@@ -311,13 +316,19 @@ async function submitBulkGenerate() {
       registrant_ids: selectedGrads.value,
       cert_prefix: certPrefix.value,
     })
-    genSuccess.value = res.data.message
-    selectedGrads.value = []
-    await loadGraduates()
-    await loadCerts()
-    setTimeout(() => { showGenerate.value = false; genSuccess.value = '' }, 3000)
+  const succeeded = res.data.results?.filter((r: any) => r.status === 'success').length || 0
+    if (succeeded > 0) {
+      flashMessage.value = `${succeeded} sertifikat berhasil diterbitkan`
+      selectedGrads.value = []
+      showGenerate.value = false
+      await nextTick()
+      await loadCerts()
+      setTimeout(() => { flashMessage.value = '' }, 4000)
+    } else {
+      modalError.value = res.data.results?.map((r: any) => r.status).join('; ') || 'Gagal menerbitkan sertifikat'
+    }
   } catch (e: any) {
-    modalError.value = e?.response?.data?.message || 'Gagal generate sertifikat'
+    modalError.value = e?.response?.data?.error || e?.response?.data?.message || 'Gagal generate sertifikat'
   } finally {
     submitting.value = false
   }
@@ -359,11 +370,19 @@ function toggleCert(c: Cert) {
 }
 
 function downloadCert(c: Cert) {
-  window.open(`/api/v1/certificates/download/${c.id}`, '_blank')
+  axios.get(`/api/v1/certificates/download/${c.id}`, { responseType: 'blob' }).then(res => {
+    const url = URL.createObjectURL(res.data)
+    const a = document.createElement('a')
+    a.href = url; a.download = `ijazah_${c.certNo}.pdf`; a.click()
+    URL.revokeObjectURL(url)
+  }).catch(() => {})
 }
 
 function printCert(c: Cert) {
-  window.open(`/api/v1/certificates/download/${c.id}`, '_blank')
+  axios.get(`/api/v1/certificates/download/${c.id}`, { responseType: 'blob' }).then(res => {
+    const url = URL.createObjectURL(res.data)
+    window.open(url, '_blank')
+  }).catch(() => {})
 }
 
 function verifyQr(c: Cert) {
@@ -376,12 +395,22 @@ async function loadCerts() {
   loading.value = true
   try {
     const res = await axios.get('/api/v1/certificates/list')
-    certs.value = res.data.map((c: any) => ({
-      ...c,
-      issueDate: c.issueDate ? new Date(c.issueDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '-',
-      verifyCount: c.verificationToken ? Math.floor(Math.random() * 5) + 1 : 0,
-      printCount: Math.floor(Math.random() * 3) + 1,
-    }))
+    certs.value = (res.data || []).map((c: any, i: number) => {
+      let dateStr = '-'
+      try { dateStr = c.issueDate ? new Date(c.issueDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '-' } catch { dateStr = String(c.issueDate || '-') }
+      return {
+        id: c.id || String(i),
+        certNo: c.certNo || '-',
+        participant: c.participant || '-',
+        batch: c.batch || '-',
+        issueDate: dateStr,
+        verificationToken: c.verificationToken || '',
+        filePath: c.filePath || '',
+        approver: c.approver || '-',
+        verifyCount: c.verificationToken ? Math.floor(Math.random() * 5) + 1 : 0,
+        printCount: Math.floor(Math.random() * 3) + 1,
+      }
+    })
   } catch {
     certs.value = []
   } finally {

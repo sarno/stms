@@ -36,7 +36,7 @@ export const poldaRoutes = new Elysia({ prefix: "/api/v1/polda" })
         return { error: "Token tidak ditemukan" };
       }
       const payload = await jwt.verify(authHeader.slice(7));
-      if (!payload || payload.role !== "POLDA_VERIFICATOR") {
+      if (!payload || !["ADMIN_PUSDIKLAT", "POLDA_VERIFICATOR"].includes(payload.role as string)) {
         set.status = 403;
         return { error: "Akses ditolak" };
       }
@@ -67,9 +67,9 @@ export const poldaRoutes = new Elysia({ prefix: "/api/v1/polda" })
         return { error: "Token tidak ditemukan" };
       }
       const payload = await jwt.verify(authHeader.slice(7));
-      if (!payload || payload.role !== "POLDA_VERIFICATOR") {
+      if (!payload || !["ADMIN_PUSDIKLAT", "POLDA_VERIFICATOR"].includes(payload.role as string)) {
         set.status = 403;
-        return { error: "Hanya Verifikator Polda yang dapat menerbitkan ijazah" };
+        return { error: "Akses ditolak" };
       }
 
       const { registrant_id, certificate_number } = body as {
@@ -100,9 +100,9 @@ export const poldaRoutes = new Elysia({ prefix: "/api/v1/polda" })
         return { error: "Token tidak ditemukan" };
       }
       const payload = await jwt.verify(authHeader.slice(7));
-      if (!payload || payload.role !== "POLDA_VERIFICATOR") {
+      if (!payload || !["ADMIN_PUSDIKLAT", "POLDA_VERIFICATOR"].includes(payload.role as string)) {
         set.status = 403;
-        return { error: "Hanya Verifikator Polda yang dapat menerbitkan ijazah" };
+        return { error: "Akses ditolak" };
       }
 
       const { registrant_ids, cert_prefix } = body as {

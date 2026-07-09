@@ -63,7 +63,7 @@ import {
   LayoutDashboard, Users, UserPlus, GraduationCap, BookOpen,
   Calendar, ClipboardCheck, Award, Settings,
   Building2, Layers, BookMarked, BarChart3,
-  Users2, Star, ScanLine, Key, ListChecks,
+  Users2, Star, ScanLine, Key, ListChecks, Wallet,
 } from 'lucide-vue-next'
 
 const props = defineProps<{ currentPage: string }>()
@@ -127,6 +127,14 @@ const navConfig = [
     ],
   },
   {
+    section: 'Keuangan',
+    items: [
+      { icon: Wallet, label: 'Tarif Layanan', page: 'finance-rates' },
+      { icon: ClipboardCheck, label: 'Verifikasi Pembayaran', page: 'finance-payments' },
+      { icon: BarChart3, label: 'Laporan Keuangan', page: 'finance-reports' },
+    ],
+  },
+  {
     section: 'Sistem',
     items: [
       { icon: BarChart3, label: 'Laporan', page: 'reports' },
@@ -139,7 +147,7 @@ const navConfig = [
 ]
 
 const rolePageMap: Record<string, string[]> = {
-  ADMIN_PUSDIKLAT: ['dashboard', 'training-centers', 'instructors', 'curriculum', 'subjects', 'cert-templates', 'participants', 'registration', 'doc-verification', 'batches', 'schedule', 'attendance', 'grades', 'graduation', 'certificates', 'verification', 'reports', 'users', 'roles', 'audit-logs', 'settings'],
+  ADMIN_PUSDIKLAT: ['dashboard', 'training-centers', 'instructors', 'curriculum', 'subjects', 'cert-templates', 'participants', 'registration', 'doc-verification', 'batches', 'schedule', 'attendance', 'grades', 'graduation', 'certificates', 'verification', 'finance-rates', 'finance-payments', 'finance-reports', 'reports', 'users', 'roles', 'audit-logs', 'settings'],
   POLDA_VERIFICATOR: ['dashboard', 'participants', 'batches', 'grades', 'graduation', 'certificates', 'verification', 'polda-approval', 'audit-logs'],
   PESERTA: ['dashboard', 'registration', 'verification'],
 }

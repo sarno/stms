@@ -1,5 +1,26 @@
 <template>
   <div class="p-5 space-y-4 max-w-2xl mx-auto">
+    <!-- Public verification link -->
+    <div class="bg-white rounded-xl border border-slate-200 p-4 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="p-2 rounded-lg bg-blue-50">
+          <Globe :size="16" class="text-blue-500" />
+        </div>
+        <div>
+          <p class="text-sm font-semibold text-slate-800">Link Verifikasi Publik</p>
+          <div class="flex items-center gap-2 mt-0.5">
+            <code class="text-xs text-slate-500 bg-slate-50 px-2 py-0.5 rounded border border-slate-200">{{ baseUrl }}/verifikasi</code>
+            <button @click="copyLink" class="text-blue-600 hover:text-blue-700 text-xs font-medium cursor-pointer">Salin</button>
+          </div>
+          <transition name="fade">
+            <p v-if="copied" class="text-[10px] text-emerald-600 mt-1 flex items-center gap-1">
+              <CheckCircle :size="10" /> Tersalin ke clipboard
+            </p>
+          </transition>
+        </div>
+      </div>
+    </div>
+
     <div>
       <h1 class="text-lg font-bold text-slate-900">Verifikasi Sertifikat</h1>
       <p class="text-xs text-slate-400 mt-0.5">Cek keaslian sertifikat berdasarkan nomor atau QR code</p>
@@ -83,7 +104,16 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import axios from 'axios'
-import { Search, RefreshCw, CheckCircle, XCircle, AlertCircle, QrCode, User } from 'lucide-vue-next'
+import { Search, RefreshCw, CheckCircle, XCircle, AlertCircle, QrCode, User, Globe } from 'lucide-vue-next'
+
+const baseUrl = window.location.origin
+const copied = ref(false)
+
+function copyLink() {
+  navigator.clipboard.writeText(`${baseUrl}/verifikasi`)
+  copied.value = true
+  setTimeout(() => { copied.value = false }, 2000)
+}
 
 const token = ref('')
 const loading = ref(false)
@@ -111,27 +141,10 @@ async function verify() {
   result.value = null
   try {
     const res = await axios.get(`/api/v1/verify/${token.value.trim()}`)
-    certData.value = res.data
+    certData.value = res.data.data
     result.value = true
-  } catch (e: any) {
-    if (e.response?.status === 404) {
-      result.value = false
-    } else {
-      // fallback mock for demo
-      if (token.value.toUpperCase().startsWith('CERT-2024-')) {
-        certData.value = {
-          name: 'Ahmad Fauzi Rahman',
-          certNumber: token.value.toUpperCase(),
-          batch: 'ANG-001/2024',
-          issuedDate: '12 Maret 2024',
-          trainingType: 'Satpam Gada Pratama',
-          institution: 'Lembaga Pelatihan Satpam Nusantara',
-        }
-        result.value = true
-      } else {
-        result.value = false
-      }
-    }
+  } catch {
+    result.value = false
   } finally {
     loading.value = false
   }
@@ -142,3 +155,12 @@ function reset() {
   token.value = ''
 }
 </script>
+
+<style scoped>
+.fade-enter-active, .fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+.fade-enter-from, .fade-leave-to {
+  opacity: 0;
+}
+</style>

@@ -116,9 +116,9 @@ export const certRoutes = new Elysia({ prefix: "/api/v1/certificates" })
         return { error: "Token tidak ditemukan" };
       }
       const payload = await jwt.verify(authHeader.slice(7));
-      if (!payload || payload.role !== "POLDA_VERIFICATOR") {
+      if (!payload || !["ADMIN_PUSDIKLAT", "POLDA_VERIFICATOR"].includes(payload.role as string)) {
         set.status = 403;
-        return { error: "Hanya Verifikator Polda yang dapat menerbitkan ijazah" };
+        return { error: "Akses ditolak" };
       }
 
       const { registrant_id, certificate_number } = body as {
@@ -244,39 +244,40 @@ export const certRoutes = new Elysia({ prefix: "/api/v1/certificates" })
         },
       });
     }
-  );
+  )
+  .get(
+    "/list",
+    async ({ jwt, set, headers }) => {
+      const authHeader = headers["authorization"];
+      if (!authHeader?.startsWith("Bearer ")) { set.status = 401; return { error: "Token tidak ditemukan" }; }
+      const payload = await jwt.verify(authHeader.slice(7));
+      if (!payload) { set.status = 401; return { error: "Token tidak valid" }; }
 
-export const certificateListRoutes = new Elysia({ prefix: "/api/v1/certificates" })
-  .get("/list", async ({ jwt, set, headers }) => {
-    const authHeader = headers["authorization"];
-    if (!authHeader?.startsWith("Bearer ")) { set.status = 401; return { error: "Token tidak ditemukan" }; }
-    const payload = await jwt.verify(authHeader.slice(7));
-    if (!payload) { set.status = 401; return { error: "Token tidak valid" }; }
-
-    const certs = await prisma.certificate.findMany({
-      include: {
-        registrant: {
-          include: {
-            user: { select: { name: true } },
-            batch: { select: { batchName: true } },
+      const certs = await prisma.certificate.findMany({
+        include: {
+          registrant: {
+            include: {
+              user: { select: { name: true } },
+              batch: { select: { batchName: true } },
+            },
           },
+          poldaApprover: { select: { name: true } },
         },
-        poldaApprover: { select: { name: true } },
-      },
-      orderBy: { issuedAt: "desc" },
-    });
+        orderBy: { issuedAt: "desc" },
+      });
 
-    return certs.map(c => ({
-      id: c.id,
-      certNo: c.certificateNumber,
-      participant: c.registrant.user.name,
-      batch: c.registrant.batch.batchName,
-      issueDate: c.issuedAt,
-      verificationToken: c.verificationToken,
-      filePath: c.filePath,
-      approver: c.poldaApprover.name,
-    }));
-  });
+      return certs.map(c => ({
+        id: c.id,
+        certNo: c.certificateNumber,
+        participant: c.registrant.user.name,
+        batch: c.registrant.batch.batchName,
+        issueDate: c.issuedAt,
+        verificationToken: c.verificationToken,
+        filePath: c.filePath,
+        approver: c.poldaApprover.name,
+      }));
+    }
+  );
 
 export const graduationRoutes = new Elysia({ prefix: "/api/v1/graduation" })
   .get("/candidates/:batch_id", async ({ params, jwt, set, headers }) => {
@@ -373,17 +374,23 @@ export const waStatusRoutes = new Elysia({ prefix: "/api/v1/wa" })
 
 export const verificationRoutes = new Elysia({ prefix: "/api/v1/verify" })
   .get("/:token", async ({ params, set }) => {
-    const cert = await prisma.certificate.findUnique({
-      where: { verificationToken: params.token },
+    const cert = await prisma.certificate.findFirst({
+      where: {
+        OR: [
+          { verificationToken: params.token },
+          { certificateNumber: params.token },
+        ]
+      },
       include: {
         registrant: {
           include: {
             user: { select: { name: true } },
-            batch: { select: { batchName: true } },
+            batch: { select: { batchName: true, type: true } },
           },
         },
+        poldaApprover: { select: { name: true } },
       },
-    });
+    }) as any;
 
     if (!cert) {
       set.status = 404;
@@ -393,6 +400,16 @@ export const verificationRoutes = new Elysia({ prefix: "/api/v1/verify" })
     return {
       valid: true,
       data: {
+        // new format (VerificationView)
+        name: cert.registrant.user.name,
+        certNumber: cert.certificateNumber,
+        batch: cert.registrant.batch.batchName,
+        trainingType: cert.registrant.batch.type || "-",
+        issuedDate: cert.issuedAt instanceof Date
+          ? cert.issuedAt.toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })
+          : String(cert.issuedAt),
+        institution: "DITBINMAS POLDA",
+        // legacy format (PublicVerifyView)
         candidate_name: cert.registrant.user.name,
         batch_name: cert.registrant.batch.batchName,
         certificate_number: cert.certificateNumber,

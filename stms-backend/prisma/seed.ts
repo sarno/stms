@@ -78,6 +78,22 @@ async function main() {
 
   console.log("✅ Training Batches: 4 created");
 
+  // ─── SERVICE RATES ─────────────────────────────────────────────────────────
+  const rateData = [
+    { trainingType: "Satpam Umum", amount: 1500000, description: "Tarif Gada Pratama" },
+    { trainingType: "Gada Madya", amount: 2000000, description: "Tarif Gada Madya" },
+    { trainingType: "Satpam VIP", amount: 2500000, description: "Tarif Satpam VIP / Gada Utama" },
+  ];
+
+  for (const r of rateData) {
+    await prisma.serviceRate.upsert({
+      where: { trainingType: r.trainingType },
+      update: { amount: r.amount, description: r.description },
+      create: r,
+    });
+  }
+  console.log("✅ Service Rates: 3 created");
+
   // ─── REGISTRANTS ──────────────────────────────────────────────────────────
   const registrantConfigs = [
     // ANG-001 (COMPLETED) — peserta 6,7 (graduated)

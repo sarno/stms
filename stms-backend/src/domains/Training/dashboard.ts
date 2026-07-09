@@ -40,10 +40,18 @@ export const dashboardRoutes = new Elysia({ prefix: "/api/v1/dashboard" })
     const totalLulus = grades.filter(g => g.finalStatus === "LULUS").length;
     const tingkatKelulusan = totalGraded > 0 ? Math.round((totalLulus / totalGraded) * 100) : 0;
 
-    // Pendapatan (mock calculation: PAID=1.5jt, PARTIAL=0.75jt per peserta)
+    // Pendapatan berdasarkan service rates
+    const rates = await prisma.serviceRate.findMany();
+    const rateMap = new Map(rates.map(r => [r.trainingType, Number(r.amount)]));
     const pendapatan = registrants.reduce((sum, r) => {
-      if (r.paymentStatus === "PAID") return sum + 1500000;
-      if (r.paymentStatus === "PARTIAL") return sum + 750000;
+      if (r.paymentStatus === "PAID") {
+        const rate = rateMap.get(r.batch.type) || 1500000;
+        return sum + rate;
+      }
+      if (r.paymentStatus === "PARTIAL") {
+        const rate = rateMap.get(r.batch.type) || 1500000;
+        return sum + Math.round(rate * 0.5);
+      }
       return sum;
     }, 0);
 
