@@ -29,6 +29,104 @@ const masterData = {
     { id: "7", code: "MPL-007", name: "Penggunaan Alat Komunikasi", curriculum: "KUR-001", theoryHours: 12, practiceHours: 12, totalHours: 24, kkm: 70, type: "Teori & Praktik" },
     { id: "8", code: "MPL-008", name: "Laporan dan Administrasi", curriculum: "KUR-001", theoryHours: 16, practiceHours: 8, totalHours: 24, kkm: 70, type: "Teori" },
   ],
+  certTemplates: [
+    {
+      id: "1",
+      code: "TPL-001",
+      name: "Template Ijazah Gada Pratama",
+      trainingType: "Satpam Umum",
+      orientation: "landscape",
+      pageSize: "A4",
+      primaryColor: "#1a3a5c",
+      accentColor: "#c9a84c",
+      fontFamily: "Times New Roman",
+      hasQR: true,
+      hasDigitalSign: true,
+      status: "active",
+      createdAt: "2023-01-15",
+      updatedAt: "2024-05-20",
+    },
+    {
+      id: "2",
+      code: "TPL-002",
+      name: "Template Ijazah Gada Madya",
+      trainingType: "Satpam VIP",
+      orientation: "landscape",
+      pageSize: "A4",
+      primaryColor: "#0f2942",
+      accentColor: "#d4af37",
+      fontFamily: "Times New Roman",
+      hasQR: true,
+      hasDigitalSign: true,
+      status: "active",
+      createdAt: "2023-02-10",
+      updatedAt: "2024-03-12",
+    },
+    {
+      id: "3",
+      code: "TPL-003",
+      name: "Template Ijazah Gada Utama",
+      trainingType: "Satpam Industri",
+      orientation: "landscape",
+      pageSize: "A4",
+      primaryColor: "#1e293b",
+      accentColor: "#0ea5e9",
+      fontFamily: "Times New Roman",
+      hasQR: true,
+      hasDigitalSign: true,
+      status: "active",
+      createdAt: "2023-06-01",
+      updatedAt: "2024-06-18",
+    },
+    {
+      id: "4",
+      code: "TPL-004",
+      name: "Template Sertifikat Kompetensi",
+      trainingType: "Umum",
+      orientation: "portrait",
+      pageSize: "A4",
+      primaryColor: "#059669",
+      accentColor: "#fbbf24",
+      fontFamily: "Arial",
+      hasQR: true,
+      hasDigitalSign: false,
+      status: "active",
+      createdAt: "2023-08-20",
+      updatedAt: "2024-01-10",
+    },
+    {
+      id: "5",
+      code: "TPL-005",
+      name: "Template Sertifikat Penghargaan",
+      trainingType: "Umum",
+      orientation: "landscape",
+      pageSize: "A4",
+      primaryColor: "#7c2d12",
+      accentColor: "#fbbf24",
+      fontFamily: "Georgia",
+      hasQR: false,
+      hasDigitalSign: false,
+      status: "draft",
+      createdAt: "2024-02-14",
+      updatedAt: "2024-02-14",
+    },
+    {
+      id: "6",
+      code: "TPL-006",
+      name: "Template Ijazah Lama (Deprecated)",
+      trainingType: "Satpam Umum",
+      orientation: "portrait",
+      pageSize: "Legal",
+      primaryColor: "#000000",
+      accentColor: "#666666",
+      fontFamily: "Courier New",
+      hasQR: false,
+      hasDigitalSign: false,
+      status: "inactive",
+      createdAt: "2020-01-01",
+      updatedAt: "2022-12-31",
+    },
+  ],
 }
 
 function authGuard(headers: any, jwt: any, role?: string) {
@@ -108,5 +206,23 @@ export const masterdataRoutes = new Elysia({ prefix: "/api/v1/masterdata" })
   .delete("/subjects/:id", async ({ params }) => {
     const idx = masterData.subjects.findIndex(i => i.id === params.id);
     if (idx >= 0) masterData.subjects.splice(idx, 1);
+    return { message: "Berhasil dihapus" };
+  })
+  // Cert Templates
+  .get("/cert-templates", async () => masterData.certTemplates)
+  .post("/cert-templates", async ({ body, set }) => {
+    const item = { ...(body as any), id: crypto.randomUUID(), createdAt: new Date().toISOString().slice(0, 10), updatedAt: new Date().toISOString().slice(0, 10) };
+    masterData.certTemplates.push(item);
+    set.status = 201;
+    return item;
+  })
+  .put("/cert-templates/:id", async ({ params, body }) => {
+    const idx = masterData.certTemplates.findIndex(i => i.id === params.id);
+    if (idx >= 0) masterData.certTemplates[idx] = { ...(body as any), id: params.id, updatedAt: new Date().toISOString().slice(0, 10) };
+    return masterData.certTemplates[idx];
+  })
+  .delete("/cert-templates/:id", async ({ params }) => {
+    const idx = masterData.certTemplates.findIndex(i => i.id === params.id);
+    if (idx >= 0) masterData.certTemplates.splice(idx, 1);
     return { message: "Berhasil dihapus" };
   });
