@@ -1,5 +1,36 @@
 <template>
-  <div class="p-5 space-y-4">
+  <div class="p-5 space-y-5">
+    <div class="grid grid-cols-2 xl:grid-cols-4 gap-3">
+      <div class="bg-white rounded-xl border border-slate-200 p-5 flex items-start gap-3.5 hover:shadow-sm transition-shadow">
+        <div class="p-2.5 rounded-lg flex-shrink-0 bg-blue-50 text-blue-600"><Users :size="18" /></div>
+        <div class="min-w-0 flex-1">
+          <p class="text-xs text-slate-500 font-medium leading-tight">Total Instruktur</p>
+          <p class="text-2xl font-semibold text-slate-900 mt-0.5 leading-none tracking-tight">{{ instructors.length }}</p>
+        </div>
+      </div>
+      <div class="bg-white rounded-xl border border-slate-200 p-5 flex items-start gap-3.5 hover:shadow-sm transition-shadow">
+        <div class="p-2.5 rounded-lg flex-shrink-0 bg-emerald-50 text-emerald-600"><CheckCircle :size="18" /></div>
+        <div class="min-w-0 flex-1">
+          <p class="text-xs text-slate-500 font-medium leading-tight">Aktif</p>
+          <p class="text-2xl font-semibold text-slate-900 mt-0.5 leading-none tracking-tight">{{ instructors.filter(i => i.status === 'active').length }}</p>
+        </div>
+      </div>
+      <div class="bg-white rounded-xl border border-slate-200 p-5 flex items-start gap-3.5 hover:shadow-sm transition-shadow">
+        <div class="p-2.5 rounded-lg flex-shrink-0 bg-red-50 text-red-600"><XCircle :size="18" /></div>
+        <div class="min-w-0 flex-1">
+          <p class="text-xs text-slate-500 font-medium leading-tight">Tidak Aktif</p>
+          <p class="text-2xl font-semibold text-slate-900 mt-0.5 leading-none tracking-tight">{{ instructors.filter(i => i.status === 'inactive').length }}</p>
+        </div>
+      </div>
+      <div class="bg-white rounded-xl border border-slate-200 p-5 flex items-start gap-3.5 hover:shadow-sm transition-shadow">
+        <div class="p-2.5 rounded-lg flex-shrink-0 bg-violet-50 text-violet-600"><BookMarked :size="18" /></div>
+        <div class="min-w-0 flex-1">
+          <p class="text-xs text-slate-500 font-medium leading-tight">Mata Pelajaran Diampu</p>
+          <p class="text-2xl font-semibold text-slate-900 mt-0.5 leading-none tracking-tight">{{ subjectCount }}</p>
+        </div>
+      </div>
+    </div>
+
     <div class="flex items-center justify-between">
       <div>
         <h1 class="text-lg font-bold text-slate-900">Instruktur</h1>
@@ -12,7 +43,7 @@
 
     <div class="relative max-w-xs">
       <Search :size="13" class="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
-      <input v-model="search" type="text" placeholder="Cari instruktur..."
+      <input v-model="search" type="text" placeholder="Cari instruktur atau spesialisasi..."
         class="w-full pl-8 pr-3 py-1.5 text-xs border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400" />
     </div>
 
@@ -23,9 +54,10 @@
       <table v-else class="w-full text-xs">
         <thead>
           <tr class="border-b border-slate-100 bg-slate-50/60">
+            <th class="px-4 py-2.5 text-left font-semibold text-slate-500">Instruktur</th>
             <th class="px-4 py-2.5 text-left font-semibold text-slate-500">NIP</th>
-            <th class="px-4 py-2.5 text-left font-semibold text-slate-500">Nama</th>
             <th class="px-4 py-2.5 text-left font-semibold text-slate-500">Spesialisasi</th>
+            <th class="px-4 py-2.5 text-left font-semibold text-slate-500">Mata Pelajaran Diampu</th>
             <th class="px-4 py-2.5 text-left font-semibold text-slate-500">Telepon</th>
             <th class="px-4 py-2.5 text-left font-semibold text-slate-500">Status</th>
             <th class="px-4 py-2.5 text-left font-semibold text-slate-500">Aksi</th>
@@ -33,25 +65,33 @@
         </thead>
         <tbody>
           <tr v-if="filtered.length === 0">
-            <td colspan="6" class="text-center py-12 text-slate-400">Tidak ada data</td>
+            <td colspan="7" class="text-center py-12 text-slate-400">Tidak ada data</td>
           </tr>
           <tr v-for="ins in paginatedItems" :key="ins.id" class="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
-            <td class="px-4 py-3 font-mono text-slate-500">{{ ins.nip }}</td>
             <td class="px-4 py-3">
-              <div class="flex items-center gap-2">
-                <div class="w-7 h-7 rounded-full bg-gradient-to-br from-violet-500 to-violet-700 flex items-center justify-center flex-shrink-0 text-white font-bold text-[10px]">
-                  {{ initials(ins.name) }}
+              <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-full bg-violet-100 flex items-center justify-center flex-shrink-0">
+                  <span class="text-[10px] font-bold text-violet-700">{{ initials(ins.name) }}</span>
                 </div>
-                <span class="font-medium text-slate-800">{{ ins.name }}</span>
+                <span class="font-semibold text-slate-800 whitespace-nowrap">{{ ins.name }}</span>
               </div>
             </td>
+            <td class="px-4 py-3 font-mono text-slate-500">{{ ins.nip }}</td>
             <td class="px-4 py-3 text-slate-600">{{ ins.specialization }}</td>
+            <td class="px-4 py-3">
+              <div class="flex flex-wrap gap-1">
+                <span v-for="(s, si) in (ins.subjects || [])" :key="si"
+                  class="text-[10px] px-2 py-0.5 bg-blue-50 border border-blue-100 text-blue-600 rounded-full font-medium">{{ s }}</span>
+                <span v-if="!ins.subjects?.length" class="text-slate-300">—</span>
+              </div>
+            </td>
             <td class="px-4 py-3 text-slate-600">{{ ins.phone }}</td>
             <td class="px-4 py-3"><Badge :status="ins.status" /></td>
             <td class="px-4 py-3">
-              <div class="flex items-center gap-1">
-                <button @click="openEdit(ins)" class="p-1 rounded hover:bg-amber-50 text-slate-400 hover:text-amber-600 transition-colors cursor-pointer"><Edit :size="13" /></button>
-                <button @click="confirmDelete(ins)" class="p-1 rounded hover:bg-red-50 text-slate-400 hover:text-red-600 transition-colors cursor-pointer"><Trash2 :size="13" /></button>
+              <div class="flex items-center gap-0.5">
+                <button @click="openEdit(ins)" class="p-1.5 text-slate-300 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"><Eye :size="13" /></button>
+                <button @click="openEdit(ins)" class="p-1.5 text-slate-300 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors cursor-pointer"><Edit :size="13" /></button>
+                <button @click="confirmDelete(ins)" class="p-1.5 text-slate-300 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"><Trash2 :size="13" /></button>
               </div>
             </td>
           </tr>
@@ -85,6 +125,17 @@
               class="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400" />
           </div>
           <div>
+            <label class="block text-xs font-medium text-slate-600 mb-1">Mata Pelajaran Diampu</label>
+            <div v-if="allSubjects.length" class="border border-slate-200 rounded-lg p-3 max-h-32 overflow-y-auto space-y-1.5">
+              <label v-for="sub in allSubjects" :key="sub.id" class="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" :value="sub.name" v-model="form.subjects"
+                  class="w-3.5 h-3.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500/30" />
+                <span class="text-xs text-slate-700">{{ sub.name }}</span>
+              </label>
+            </div>
+            <p v-else class="text-xs text-slate-400">Memuat daftar mata pelajaran...</p>
+          </div>
+          <div>
             <label class="block text-xs font-medium text-slate-600 mb-1">Telepon</label>
             <input v-model="form.phone" type="text"
               class="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400" />
@@ -93,7 +144,7 @@
             <label class="block text-xs font-medium text-slate-600 mb-1">Status</label>
             <select v-model="form.status" class="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400 bg-white">
               <option value="active">Aktif</option>
-              <option value="cancelled">Tidak Aktif</option>
+              <option value="inactive">Tidak Aktif</option>
             </select>
           </div>
         </div>
@@ -133,9 +184,10 @@ import axios from 'axios'
 import Badge from '@/components/ui/Badge.vue'
 import { usePagination } from '@/composables/usePagination'
 import Pagination from '@/components/ui/Pagination.vue'
-import { Search, Plus, Edit, Trash2, X } from 'lucide-vue-next'
+import { Search, Plus, Eye, Edit, Trash2, X, Users, CheckCircle, XCircle, BookMarked } from 'lucide-vue-next'
 
 const instructors = ref<any[]>([])
+const allSubjects = ref<any[]>([])
 const loading = ref(true)
 const search = ref('')
 const showModal = ref(false)
@@ -145,11 +197,19 @@ const deleteTarget = ref<any>(null)
 const submitting = ref(false)
 const modalError = ref('')
 
-const form = reactive({ name: '', nip: '', specialization: '', phone: '', status: 'active' })
+const form = reactive({ name: '', nip: '', specialization: '', phone: '', status: 'active', subjects: [] as string[] })
+
+const subjectCount = computed(() => {
+  const all = new Set<string>()
+  instructors.value.forEach(i => (i.subjects || []).forEach((s: string) => all.add(s)))
+  return all.size
+})
 
 const filtered = computed(() => {
   const q = search.value.toLowerCase()
-  return instructors.value.filter(i => !q || i.name?.toLowerCase().includes(q) || i.nip?.toLowerCase().includes(q) || i.specialization?.toLowerCase().includes(q))
+  return instructors.value.filter(i =>
+    !q || i.name?.toLowerCase().includes(q) || i.specialization?.toLowerCase().includes(q)
+  )
 })
 
 const { currentPage, totalItems, paginatedItems, resetPage } = usePagination(filtered, 10)
@@ -157,12 +217,12 @@ const { currentPage, totalItems, paginatedItems, resetPage } = usePagination(fil
 watch(search, () => resetPage())
 
 function initials(name: string) {
-  return (name || '?').split(' ').slice(0, 2).map((w: string) => w[0]).join('').toUpperCase()
+  return (name || '?').replace(/^[A-Z]+\.\s*/i, '').split(' ').slice(0, 2).map((w: string) => w[0]).join('').toUpperCase()
 }
 
 function openCreate() {
   editId.value = null
-  form.name = ''; form.nip = ''; form.specialization = ''; form.phone = ''; form.status = 'active'
+  form.name = ''; form.nip = ''; form.specialization = ''; form.phone = ''; form.status = 'active'; form.subjects = []
   modalError.value = ''; showModal.value = true
 }
 
@@ -170,6 +230,7 @@ function openEdit(ins: any) {
   editId.value = ins.id
   form.name = ins.name || ''; form.nip = ins.nip || ''; form.specialization = ins.specialization || ''
   form.phone = ins.phone || ''; form.status = ins.status || 'active'
+  form.subjects = [...(ins.subjects || [])]
   modalError.value = ''; showModal.value = true
 }
 
@@ -178,10 +239,11 @@ function closeModal() { showModal.value = false; modalError.value = '' }
 async function submitForm() {
   submitting.value = true; modalError.value = ''
   try {
+    const payload = { ...form }
     if (editId.value) {
-      await axios.put(`/api/v1/masterdata/instructors/${editId.value}`, { ...form })
+      await axios.put(`/api/v1/masterdata/instructors/${editId.value}`, payload)
     } else {
-      await axios.post('/api/v1/masterdata/instructors', { ...form })
+      await axios.post('/api/v1/masterdata/instructors', payload)
     }
     closeModal(); await load()
   } catch (e: any) {
@@ -203,8 +265,17 @@ async function doDelete() {
 
 async function load() {
   loading.value = true
-  try { const res = await axios.get('/api/v1/masterdata/instructors'); instructors.value = res.data }
-  catch { instructors.value = [] }
+  try {
+    const [insRes, subRes] = await Promise.all([
+      axios.get('/api/v1/masterdata/instructors'),
+      axios.get('/api/v1/masterdata/subjects'),
+    ])
+    instructors.value = insRes.data
+    allSubjects.value = subRes.data
+  } catch {
+    instructors.value = []
+    allSubjects.value = []
+  }
   finally { loading.value = false }
 }
 

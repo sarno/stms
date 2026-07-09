@@ -1,6 +1,7 @@
 import Elysia from "elysia";
 import { jwt } from "@elysiajs/jwt";
 import { cors } from "@elysiajs/cors";
+import { join } from "path";
 import { authRoutes } from "./domains/Auth";
 import { registrationRoutes } from "./domains/Registration";
 import { gradingRoutes } from "./domains/Grading";
@@ -30,6 +31,12 @@ export const app = new Elysia()
   .use(attendanceRoutes)
   .use(scheduleRoutes)
   .use(dashboardRoutes)
+  .get("/storage/uploads/*", async ({ params, set }) => {
+    const filePath = join(process.cwd(), "storage", "uploads", params["*"]);
+    const file = Bun.file(filePath);
+    if (!(await file.exists())) { set.status = 404; return { error: "File tidak ditemukan" }; }
+    return new Response(file, { headers: { "Content-Type": file.type || "application/octet-stream" } });
+  })
   .get("/", () => ({ message: "STMS API v1" }));
 
 if (import.meta.main) {

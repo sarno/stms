@@ -84,7 +84,7 @@
             <label class="block text-xs font-medium text-slate-600 mb-1">Angkatan <span class="text-red-500">*</span></label>
             <select v-model="form.batchId" class="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400">
               <option value="">Pilih Angkatan</option>
-              <option v-for="b in batches" :key="b.id" :value="b.id">{{ b.batchCode }}</option>
+              <option v-for="b in batches" :key="b.id" :value="b.id">{{ b.batchName }}</option>
             </select>
           </div>
         </div>
@@ -136,7 +136,7 @@
       <!-- Step 2: Dokumen -->
       <div v-if="step === 2" class="space-y-4">
         <h2 class="text-sm font-bold text-slate-800">Dokumen Persyaratan</h2>
-        <p class="text-xs text-slate-400">Upload semua dokumen yang diperlukan (PDF/JPG maks. 2MB)</p>
+        <p class="text-xs text-slate-400">Upload dokumen yang diperlukan (PDF/JPG/PNG maks. 5MB per file)</p>
         <div class="space-y-2.5">
           <div v-for="doc in docList" :key="doc.key"
             class="flex items-center justify-between p-3 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">
@@ -147,12 +147,23 @@
               <div>
                 <p class="text-xs font-medium text-slate-700">{{ doc.label }}</p>
                 <p class="text-[10px] text-slate-400">{{ doc.desc }}</p>
+                <p v-if="docs[doc.key]" class="text-[10px] text-emerald-600 mt-0.5">{{ fileNames[doc.key] }}</p>
               </div>
             </div>
-            <button @click="toggleDoc(doc.key)"
-              :class="['px-3 py-1.5 text-xs font-medium rounded-lg transition-colors cursor-pointer', docs[doc.key] ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100']">
-              {{ docs[doc.key] ? 'Terupload ✓' : 'Upload' }}
-            </button>
+            <div class="flex items-center gap-2">
+              <label class="cursor-pointer">
+                <input type="file" :accept="doc.accept || '.pdf,.jpg,.jpeg,.png'" :ref="(el: any) => fileInputs[doc.key] = el"
+                  @change="onFileSelect(doc.key, ($event.target as HTMLInputElement).files)"
+                  class="hidden" />
+                <span :class="['px-3 py-1.5 text-xs font-medium rounded-lg transition-colors inline-block', docs[doc.key] ? 'bg-slate-100 text-slate-600 border border-slate-200 hover:bg-slate-200' : 'bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100']">
+                  {{ docs[doc.key] ? 'Ganti' : 'Upload' }}
+                </span>
+              </label>
+              <button v-if="docs[doc.key]" @click="removeFile(doc.key)"
+                class="p-1.5 text-slate-300 hover:text-red-500 transition-colors cursor-pointer">
+                <X :size="13" />
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -287,20 +298,51 @@ const docs = reactive<Record<string, boolean>>({
   ktp: false, kk: false, ijazah: false, skck: false, foto: false, sehat: false,
 })
 
+const files = reactive<Record<string, File | null>>({
+  ktp: null, kk: null, ijazah: null, skck: null, foto: null, sehat: null,
+})
+
+const fileNames = reactive<Record<string, string>>({
+  ktp: '', kk: '', ijazah: '', skck: '', foto: '', sehat: '',
+})
+
+const fileInputs = ref<Record<string, any>>({})
+
 const docList = [
-  { key: 'ktp', label: 'KTP', desc: 'Kartu Tanda Penduduk' },
-  { key: 'kk', label: 'Kartu Keluarga', desc: 'KK asli atau fotokopi' },
-  { key: 'ijazah', label: 'Ijazah', desc: 'Ijazah pendidikan terakhir' },
-  { key: 'skck', label: 'SKCK', desc: 'Surat Keterangan Catatan Kepolisian' },
-  { key: 'foto', label: 'Pas Foto', desc: '4x6 latar merah terbaru' },
-  { key: 'sehat', label: 'Surat Sehat', desc: 'Dari dokter/puskesmas' },
+  { key: 'ktp', label: 'KTP', desc: 'Kartu Tanda Penduduk', accept: '.pdf,.jpg,.jpeg,.png' },
+  { key: 'kk', label: 'Kartu Keluarga', desc: 'KK asli atau fotokopi', accept: '.pdf,.jpg,.jpeg,.png' },
+  { key: 'ijazah', label: 'Ijazah', desc: 'Ijazah pendidikan terakhir', accept: '.pdf,.jpg,.jpeg,.png' },
+  { key: 'skck', label: 'SKCK', desc: 'Surat Keterangan Catatan Kepolisian', accept: '.pdf,.jpg,.jpeg,.png' },
+  { key: 'foto', label: 'Pas Foto', desc: '4x6 latar merah terbaru', accept: '.jpg,.jpeg,.png' },
+  { key: 'sehat', label: 'Surat Sehat', desc: 'Dari dokter/puskesmas', accept: '.pdf,.jpg,.jpeg,.png' },
 ]
+
+function onFileSelect(key: string, fileList: FileList | null) {
+  const file = fileList?.[0]
+  if (!file) return
+
+  const maxSize = 5 * 1024 * 1024
+  if (file.size > maxSize) {
+    alert(`File ${file.name} terlalu besar. Maksimal 5MB.`)
+    return
+  }
+
+  files[key] = file
+  fileNames[key] = file.name
+  docs[key] = true
+}
+
+function removeFile(key: string) {
+  files[key] = null
+  fileNames[key] = ''
+  docs[key] = false
+  const input = fileInputs.value?.[key]
+  if (input) input.value = ''
+}
 
 const religions = ['Islam', 'Kristen', 'Katolik', 'Hindu', 'Buddha', 'Konghucu']
 const educations = ['SD', 'SMP', 'SMA/SMK', 'D3', 'S1', 'S2', 'S3']
 const provinces = ['Aceh','Bali','Banten','Bengkulu','DI Yogyakarta','DKI Jakarta','Gorontalo','Jambi','Jawa Barat','Jawa Tengah','Jawa Timur','Kalimantan Barat','Kalimantan Selatan','Kalimantan Tengah','Kalimantan Timur','Kalimantan Utara','Kepulauan Bangka Belitung','Kepulauan Riau','Lampung','Maluku','Maluku Utara','Nusa Tenggara Barat','Nusa Tenggara Timur','Papua','Papua Barat','Riau','Sulawesi Barat','Sulawesi Selatan','Sulawesi Tengah','Sulawesi Tenggara','Sulawesi Utara','Sumatera Barat','Sumatera Selatan','Sumatera Utara']
-
-function toggleDoc(key: string) { docs[key] = !docs[key] }
 
 function nextStep() { step.value++ }
 
@@ -308,7 +350,12 @@ async function submitForm() {
   submitting.value = true
   try {
     const fd = new FormData()
-    Object.entries(form).forEach(([k, v]) => fd.append(k, String(v)))
+    fd.append('batch_id', form.batchId)
+    fd.append('ktp_number', form.nik)
+    fd.append('education_level', form.education)
+    if (files.ktp) fd.append('ktp_file', files.ktp)
+    if (files.skck) fd.append('skck_file', files.skck)
+    if (files.foto) fd.append('foto_file', files.foto)
     const res = await axios.post('/api/v1/registration/apply', fd)
     regNumber.value = res.data.registrationNumber || 'REG-2024-' + String(Date.now()).slice(-4)
   } catch {
@@ -322,7 +369,9 @@ async function submitForm() {
 function resetForm() {
   step.value = 0
   Object.keys(form).forEach(k => (form as any)[k] = '')
-  Object.keys(docs).forEach(k => docs[k] = false)
+  Object.keys(docs).forEach(k => { docs[k] = false; files[k] = null; fileNames[k] = '' })
+  const inputs = fileInputs.value
+  Object.keys(inputs).forEach(k => { if (inputs[k]) inputs[k].value = '' })
   regNumber.value = ''
 }
 
@@ -332,8 +381,10 @@ onMounted(async () => {
     batches.value = res.data
   } catch {
     batches.value = [
-      { id: 1, batchCode: 'ANG-001/2024' }, { id: 2, batchCode: 'ANG-002/2024' },
-      { id: 3, batchCode: 'ANG-003/2024' }, { id: 4, batchCode: 'ANG-004/2024' },
+      { id: '00000000-0000-0000-0000-000000000001', batchName: 'Gada Pratama Angkatan 001/2024' },
+      { id: '00000000-0000-0000-0000-000000000002', batchName: 'Gada Pratama Angkatan 002/2024' },
+      { id: '00000000-0000-0000-0000-000000000003', batchName: 'Gada Madya Angkatan 003/2024' },
+      { id: '00000000-0000-0000-0000-000000000004', batchName: 'Gada Utama Angkatan 004/2024' },
     ]
   }
 })

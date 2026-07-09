@@ -144,4 +144,77 @@ export const registrationRoutes = new Elysia({ prefix: "/api/v1/registration" })
       });
       return batches;
     }
+  )
+  // ── CRUD ──
+  .get(
+    "/:id",
+    async ({ params, jwt, set, headers }) => {
+      const authHeader = headers["authorization"];
+      if (!authHeader?.startsWith("Bearer ")) { set.status = 401; return { error: "Token tidak ditemukan" }; }
+      const payload = await jwt.verify(authHeader.slice(7));
+      if (!payload) { set.status = 401; return { error: "Token tidak valid" }; }
+      const registrant = await prisma.registrant.findUnique({
+        where: { id: params.id },
+        include: { user: { select: { name: true, email: true, phoneNumber: true } }, batch: true, grade: true, certificate: true },
+      });
+      if (!registrant) { set.status = 404; return { error: "Peserta tidak ditemukan" }; }
+      return registrant;
+    }
+  )
+  .post(
+    "/",
+    async ({ body, jwt, set, headers }) => {
+      const authHeader = headers["authorization"];
+      if (!authHeader?.startsWith("Bearer ")) { set.status = 401; return { error: "Token tidak ditemukan" }; }
+      const payload = await jwt.verify(authHeader.slice(7));
+      if (!payload || payload.role !== "ADMIN_PUSDIKLAT") { set.status = 403; return { error: "Akses ditolak" }; }
+      const { user_id, batch_id, ktp_number, education_level, status_registration, payment_status } = body as any;
+      const registrant = await prisma.registrant.create({
+        data: {
+          userId: user_id,
+          batchId: batch_id,
+          ktpNumber: ktp_number,
+          educationLevel: education_level || "SMA",
+          documentUrls: {},
+          statusRegistration: status_registration || "PENDING_VERIFICATION",
+          paymentStatus: payment_status || "UNPAID",
+        },
+        include: { user: { select: { name: true, email: true, phoneNumber: true } }, batch: true },
+      });
+      set.status = 201;
+      return registrant;
+    }
+  )
+  .put(
+    "/:id",
+    async ({ params, body, jwt, set, headers }) => {
+      const authHeader = headers["authorization"];
+      if (!authHeader?.startsWith("Bearer ")) { set.status = 401; return { error: "Token tidak ditemukan" }; }
+      const payload = await jwt.verify(authHeader.slice(7));
+      if (!payload || payload.role !== "ADMIN_PUSDIKLAT") { set.status = 403; return { error: "Akses ditolak" }; }
+      const { batch_id, ktp_number, education_level, status_registration, payment_status } = body as any;
+      const registrant = await prisma.registrant.update({
+        where: { id: params.id },
+        data: {
+          ...(batch_id ? { batchId: batch_id } : {}),
+          ...(ktp_number ? { ktpNumber: ktp_number } : {}),
+          ...(education_level ? { educationLevel: education_level } : {}),
+          ...(status_registration ? { statusRegistration: status_registration } : {}),
+          ...(payment_status ? { paymentStatus: payment_status } : {}),
+        },
+        include: { user: { select: { name: true, email: true, phoneNumber: true } }, batch: true },
+      });
+      return registrant;
+    }
+  )
+  .delete(
+    "/:id",
+    async ({ params, jwt, set, headers }) => {
+      const authHeader = headers["authorization"];
+      if (!authHeader?.startsWith("Bearer ")) { set.status = 401; return { error: "Token tidak ditemukan" }; }
+      const payload = await jwt.verify(authHeader.slice(7));
+      if (!payload || payload.role !== "ADMIN_PUSDIKLAT") { set.status = 403; return { error: "Akses ditolak" }; }
+      await prisma.registrant.delete({ where: { id: params.id } });
+      return { message: "Peserta berhasil dihapus" };
+    }
   );
