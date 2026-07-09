@@ -16,6 +16,11 @@ const router = createRouter({
       component: () => import('@/views/verification/PublicVerifyView.vue'),
     },
     {
+      path: '/daftar',
+      name: 'register-public',
+      component: () => import('@/views/registration/PublicRegistrationView.vue'),
+    },
+    {
       path: '/',
       component: () => import('@/components/layout/AppLayout.vue'),
       meta: { requiresAuth: true },

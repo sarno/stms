@@ -279,6 +279,55 @@ export const certificateListRoutes = new Elysia({ prefix: "/api/v1/certificates"
   });
 
 export const graduationRoutes = new Elysia({ prefix: "/api/v1/graduation" })
+  .get("/candidates/:batch_id", async ({ params, jwt, set, headers }) => {
+    const authHeader = headers["authorization"];
+    if (!authHeader?.startsWith("Bearer ")) { set.status = 401; return { error: "Token tidak ditemukan" }; }
+    const payload = await jwt.verify(authHeader.slice(7));
+    if (!payload || !["ADMIN_PUSDIKLAT", "POLDA_VERIFICATOR"].includes(payload.role as string)) {
+      set.status = 403; return { error: "Akses ditolak" };
+    }
+
+    const registrants = await prisma.registrant.findMany({
+      where: { batchId: params.batch_id, statusRegistration: "APPROVED" },
+      include: {
+        user: { select: { name: true } },
+        grade: true,
+      },
+    });
+
+    // Get distinct attendance dates for this batch
+    const attendanceDates = await prisma.attendance.findMany({
+      where: { batchId: params.batch_id },
+      select: { date: true, registrantId: true, status: true },
+    });
+
+    const totalDays = new Set(attendanceDates.map(a => a.date.toISOString().slice(0, 10))).size;
+
+    return registrants.map(r => {
+      const g = r.grade;
+      const subjScores = (g?.subjectScores as Record<string, number>) || {};
+      const vals = Object.values(subjScores).filter(v => v > 0);
+      const avgScore = vals.length ? Math.round(vals.reduce((a, b) => a + b, 0) / vals.length) : 0;
+
+      // Attendance: count days this registrant was PRESENT or LATE
+      const regAtt = attendanceDates.filter(a => a.registrantId === r.id && (a.status === "PRESENT" || a.status === "LATE"));
+      const regDays = new Set(regAtt.map(a => a.date.toISOString().slice(0, 10))).size;
+      const attendance = totalDays > 0 ? Math.round((regDays / totalDays) * 100) : 0;
+
+      const eligible = avgScore >= 70 && attendance >= 85;
+      const approved = g?.finalStatus === "LULUS";
+
+      return {
+        id: r.id,
+        name: r.user.name,
+        regNo: `REG-${String(r.id).slice(0, 8).toUpperCase()}`,
+        avgScore,
+        attendance,
+        eligible: eligible || approved,
+        approved,
+      };
+    });
+  })
   .post("/approve", async ({ body, jwt, set, headers }) => {
     const authHeader = headers["authorization"];
     if (!authHeader?.startsWith("Bearer ")) { set.status = 401; return { error: "Token tidak ditemukan" }; }

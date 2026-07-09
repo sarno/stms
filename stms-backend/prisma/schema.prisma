@@ -27,12 +27,15 @@ model User {
 model TrainingBatch {
   id        String   @id @default(uuid()) @db.Uuid
   batchName String   @map("batch_name") @db.VarChar(100)
+  type      String   @default("Satpam Umum") @db.VarChar(50)
   startDate DateTime @map("start_date") @db.Date
   endDate   DateTime @map("end_date") @db.Date
   quota     Int
   status    String   @default("OPEN") @db.VarChar(20)
 
   registrants Registrant[]
+  schedules   Schedule[]
+  attendance  Attendance[]
 
   @@map("training_batches")
 }
@@ -52,8 +55,26 @@ model Registrant {
   batch       TrainingBatch @relation(fields: [batchId], references: [id])
   grade       Grade?
   certificate Certificate?
+  attendance  Attendance[]
 
   @@map("registrants")
+}
+
+model Attendance {
+  id           String   @id @default(uuid()) @db.Uuid
+  registrantId String   @map("registrant_id") @db.Uuid
+  batchId      String   @map("batch_id") @db.Uuid
+  date         DateTime @db.Date
+  status       String   @default("ABSENT") @db.VarChar(10)
+  checkIn      String?  @map("check_in") @db.VarChar(5)
+  checkOut     String?  @map("check_out") @db.VarChar(5)
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamp()
+
+  registrant Registrant    @relation(fields: [registrantId], references: [id])
+  batch      TrainingBatch @relation(fields: [batchId], references: [id])
+
+  @@unique([registrantId, batchId, date])
+  @@map("attendance")
 }
 
 model Grade {
@@ -62,6 +83,7 @@ model Grade {
   theoryScore        Decimal  @default(0.0) @map("theory_score") @db.Decimal(5, 2)
   physicalScore      Decimal  @default(0.0) @map("physical_score") @db.Decimal(5, 2)
   specialSkillsScore Decimal  @default(0.0) @map("special_skills_score") @db.Decimal(5, 2)
+  subjectScores      Json     @default("{}") @map("subject_scores")
   finalStatus        String   @default("PENDING") @map("final_status") @db.VarChar(20)
   updatedBy          String   @map("updated_by") @db.Uuid
 
@@ -99,4 +121,29 @@ model AuditTrail {
   user User @relation(fields: [userId], references: [id])
 
   @@map("audit_trails")
+}
+
+model SystemSetting {
+  key   String @id @db.VarChar(100)
+  value String @db.Text
+
+  @@map("system_settings")
+}
+
+model Schedule {
+  id         String   @id @default(uuid()) @db.Uuid
+  batchId    String   @map("batch_id") @db.Uuid
+  day        String   @db.VarChar(10)
+  subject    String   @db.VarChar(150)
+  instructor String   @db.VarChar(150)
+  room       String   @db.VarChar(50)
+  start      String   @db.VarChar(5)
+  end        String   @db.VarChar(5)
+  type       String   @db.VarChar(20)
+  week       Int?
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamp()
+
+  batch TrainingBatch @relation(fields: [batchId], references: [id])
+
+  @@map("schedules")
 }

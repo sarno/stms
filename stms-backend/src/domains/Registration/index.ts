@@ -3,10 +3,93 @@ import prisma from "../../shared/db";
 import { waService } from "../../shared/whatsapp";
 import { join } from "path";
 import { mkdir } from "fs/promises";
+import bcrypt from "bcryptjs";
 
 const UPLOAD_DIR = join(process.cwd(), "storage", "uploads");
 
 export const registrationRoutes = new Elysia({ prefix: "/api/v1/registration" })
+  // ── Public endpoints (no auth) ──
+  .get("/public/batches", async () => {
+    const batches = await prisma.trainingBatch.findMany({
+      where: { status: "OPEN" },
+      orderBy: { startDate: "asc" },
+    });
+    const quotaInfo = await Promise.all(
+      batches.map(async (b) => {
+        const count = await prisma.registrant.count({ where: { batchId: b.id } });
+        return { ...b, filled: count, available: b.quota - count };
+      })
+    );
+    return quotaInfo;
+  })
+  .get("/public/status", async () => {
+    const setting = await prisma.systemSetting.findUnique({ where: { key: "public_registration_open" } });
+    const isOpen = setting?.value === "true";
+
+    if (!isOpen) return { open: false, hasBatches: false };
+
+    const batches = await prisma.trainingBatch.findMany({
+      where: { status: "OPEN" },
+    });
+    const hasBatches = batches.length > 0;
+    return { open: isOpen, hasBatches };
+  })
+  .post(
+    "/public/apply",
+    async ({ body, set }) => {
+      const { name, email, phone, ktp_number, education_level, batch_id, ktp_file, skck_file, foto_file } = body as any;
+
+      let user = await prisma.user.findUnique({ where: { email } });
+      if (!user) {
+        const hash = await bcrypt.hash("sementara123", 10);
+        user = await prisma.user.create({
+          data: {
+            name,
+            email,
+            passwordHash: hash,
+            phoneNumber: phone,
+            role: "CALON_PESERTA",
+          },
+        });
+      }
+
+      const existing = await prisma.registrant.findFirst({
+        where: { userId: user.id, batchId: batch_id },
+      });
+      if (existing) {
+        set.status = 409;
+        return { error: "Anda sudah mendaftar pada angkatan ini" };
+      }
+
+      await mkdir(UPLOAD_DIR, { recursive: true });
+      const savedFiles: Record<string, string> = {};
+
+      for (const [key, file] of Object.entries({ ktp: ktp_file, skck: skck_file, foto: foto_file })) {
+        if (file && file instanceof File) {
+          const ext = file.name.split(".").pop();
+          const filename = `${user.id}_${key}_${Date.now()}.${ext}`;
+          const filepath = join(UPLOAD_DIR, filename);
+          await Bun.write(filepath, await file.arrayBuffer());
+          savedFiles[key] = `/storage/uploads/${filename}`;
+        }
+      }
+
+      const registrant = await prisma.registrant.create({
+        data: {
+          userId: user.id,
+          batchId: batch_id,
+          ktpNumber: ktp_number,
+          educationLevel: education_level || "SMA",
+          documentUrls: savedFiles,
+          statusRegistration: "PENDING_VERIFICATION",
+          paymentStatus: "UNPAID",
+        },
+      });
+
+      set.status = 201;
+      return { message: "Pendaftaran berhasil diajukan", id: registrant.id };
+    }
+  )
   .post(
     "/apply",
     async ({ body, jwt, set, headers, request }) => {
@@ -143,6 +226,34 @@ export const registrationRoutes = new Elysia({ prefix: "/api/v1/registration" })
         orderBy: { startDate: "asc" },
       });
       return batches;
+    }
+  )
+  // ── Settings (admin only) ──
+  .get(
+    "/settings/public-registration",
+    async ({ jwt, set, headers }) => {
+      const authHeader = headers["authorization"];
+      if (!authHeader?.startsWith("Bearer ")) { set.status = 401; return { error: "Token tidak ditemukan" }; }
+      const payload = await jwt.verify(authHeader.slice(7));
+      if (!payload || payload.role !== "ADMIN_PUSDIKLAT") { set.status = 403; return { error: "Akses ditolak" }; }
+      const setting = await prisma.systemSetting.findUnique({ where: { key: "public_registration_open" } });
+      return { publicRegistrationOpen: setting?.value === "true" };
+    }
+  )
+  .put(
+    "/settings/public-registration",
+    async ({ body, jwt, set, headers }) => {
+      const authHeader = headers["authorization"];
+      if (!authHeader?.startsWith("Bearer ")) { set.status = 401; return { error: "Token tidak ditemukan" }; }
+      const payload = await jwt.verify(authHeader.slice(7));
+      if (!payload || payload.role !== "ADMIN_PUSDIKLAT") { set.status = 403; return { error: "Akses ditolak" }; }
+      const { open } = body as { open: boolean };
+      await prisma.systemSetting.upsert({
+        where: { key: "public_registration_open" },
+        create: { key: "public_registration_open", value: String(open) },
+        update: { value: String(open) },
+      });
+      return { publicRegistrationOpen: open };
     }
   )
   // ── CRUD ──

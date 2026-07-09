@@ -9,7 +9,7 @@
     "db:migrate": "bun prisma migrate dev",
     "db:seed": "bun prisma/seed.ts",
     "db:generate": "bun prisma generate",
-    "test": "bun test src/tests/api.test.ts",
+    "test": "bun test src/tests/api.test.ts"
   },
   "devDependencies": {
     "@types/bun": "latest",

@@ -45,13 +45,18 @@ export const gradingRoutes = new Elysia({ prefix: "/api/v1/grades" })
         return { error: "Akses ditolak" };
       }
 
-      const { theory_score, physical_score, special_skills_score } = body as {
+      const { theory_score, physical_score, special_skills_score, subject_scores } = body as {
         theory_score: number;
         physical_score: number;
         special_skills_score: number;
+        subject_scores?: Record<string, number>;
       };
 
-      const avg = (theory_score + physical_score + special_skills_score) / 3;
+      const subjScores = subject_scores || {};
+      const vals = Object.values(subjScores).filter(v => v > 0);
+      const avg = vals.length > 0
+        ? vals.reduce((a, b) => a + b, 0) / vals.length
+        : (theory_score + physical_score + special_skills_score) / 3;
       const final_status = avg >= 70 ? "LULUS" : "TIDAK_LULUS";
 
       const grade = await prisma.grade.upsert({
@@ -60,6 +65,7 @@ export const gradingRoutes = new Elysia({ prefix: "/api/v1/grades" })
           theoryScore: theory_score,
           physicalScore: physical_score,
           specialSkillsScore: special_skills_score,
+          subjectScores: subjScores,
           finalStatus: final_status,
           updatedBy: payload.sub as string,
         },
@@ -68,6 +74,7 @@ export const gradingRoutes = new Elysia({ prefix: "/api/v1/grades" })
           theoryScore: theory_score,
           physicalScore: physical_score,
           specialSkillsScore: special_skills_score,
+          subjectScores: subjScores,
           finalStatus: final_status,
           updatedBy: payload.sub as string,
         },
@@ -80,9 +87,7 @@ export const gradingRoutes = new Elysia({ prefix: "/api/v1/grades" })
           tableName: "grades",
           afterData: {
             registrantId: params.registrant_id,
-            theory_score,
-            physical_score,
-            special_skills_score,
+            subject_scores: subjScores,
             final_status,
           },
           ipAddress: headers["x-forwarded-for"] as string || "unknown",

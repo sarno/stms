@@ -6,6 +6,27 @@
       <p class="text-xs text-slate-400 mt-0.5">Isi formulir pendaftaran peserta pelatihan satpam</p>
     </div>
 
+    <!-- Public registration link toggle -->
+    <div class="bg-white rounded-xl border border-slate-200 p-4 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div :class="['p-2 rounded-lg', publicOpen ? 'bg-emerald-50' : 'bg-slate-100']">
+          <Globe :size="16" :class="publicOpen ? 'text-emerald-600' : 'text-slate-400'" />
+        </div>
+        <div>
+          <p class="text-sm font-semibold text-slate-800">Link Pendaftaran Publik</p>
+          <div class="flex items-center gap-2 mt-0.5">
+            <code class="text-xs text-slate-500 bg-slate-50 px-2 py-0.5 rounded border border-slate-200">{{ baseUrl }}/daftar</code>
+            <button @click="copyLink" class="text-blue-600 hover:text-blue-700 text-xs font-medium cursor-pointer">Salin</button>
+          </div>
+        </div>
+      </div>
+      <label class="relative inline-flex items-center cursor-pointer">
+        <input type="checkbox" v-model="publicOpen" @change="togglePublic" class="sr-only peer" />
+        <div class="w-10 h-5.5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[3px] after:start-[3px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-500" style="height: 22px; width: 40px;"></div>
+        <span class="ml-2.5 text-xs font-medium" :class="publicOpen ? 'text-emerald-600' : 'text-slate-400'">{{ publicOpen ? 'Aktif' : 'Nonaktif' }}</span>
+      </label>
+    </div>
+
     <!-- Step indicators -->
     <div class="flex items-center gap-0">
       <template v-for="(s, i) in steps" :key="i">
@@ -279,13 +300,27 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import axios from 'axios'
-import { CheckCircle as CheckCircleIcon, ChevronLeft as ChevronLeftIcon, ChevronRight as ChevronRightIcon, File as FileIcon } from 'lucide-vue-next'
+import { CheckCircle as CheckCircleIcon, ChevronLeft as ChevronLeftIcon, ChevronRight as ChevronRightIcon, File as FileIcon, Globe } from 'lucide-vue-next'
 
 const steps = ['Data Pribadi', 'Alamat', 'Dokumen', 'Kontak Darurat', 'Review', 'Selesai']
 const step = ref(0)
 const submitting = ref(false)
 const regNumber = ref('')
 const batches = ref<any[]>([])
+const publicOpen = ref(false)
+const baseUrl = window.location.origin
+
+function copyLink() {
+  navigator.clipboard.writeText(`${baseUrl}/daftar`)
+}
+
+async function togglePublic() {
+  try {
+    await axios.put('/api/v1/registration/settings/public-registration', { open: publicOpen.value })
+  } catch {
+    publicOpen.value = !publicOpen.value
+  }
+}
 
 const form = reactive({
   fullName: '', nik: '', gender: '', birthPlace: '', birthDate: '',
@@ -377,8 +412,12 @@ function resetForm() {
 
 onMounted(async () => {
   try {
-    const res = await axios.get('/api/v1/registration/batches')
-    batches.value = res.data
+    const [batchesRes, settingRes] = await Promise.all([
+      axios.get('/api/v1/registration/batches'),
+      axios.get('/api/v1/registration/settings/public-registration').catch(() => ({ data: { publicRegistrationOpen: false } })),
+    ])
+    batches.value = batchesRes.data
+    publicOpen.value = settingRes.data.publicRegistrationOpen
   } catch {
     batches.value = [
       { id: '00000000-0000-0000-0000-000000000001', batchName: 'Gada Pratama Angkatan 001/2024' },
@@ -386,6 +425,7 @@ onMounted(async () => {
       { id: '00000000-0000-0000-0000-000000000003', batchName: 'Gada Madya Angkatan 003/2024' },
       { id: '00000000-0000-0000-0000-000000000004', batchName: 'Gada Utama Angkatan 004/2024' },
     ]
+    publicOpen.value = false
   }
 })
 </script>

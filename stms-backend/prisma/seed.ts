@@ -124,6 +124,17 @@ async function main() {
   console.log(`✅ Registrants: ${registrants.length} created`);
 
   // ─── GRADES ───────────────────────────────────────────────────────────────
+  // Subject list from masterdata
+  const subjectNames = [
+    "Hukum & Perundang-undangan",
+    "Etika Profesi Satpam",
+    "Teknik Pengamanan",
+    "Bela Diri Dasar",
+    "P3K",
+    "Kebakaran & Evakuasi",
+    "Penggunaan Alat Komunikasi",
+  ];
+
   // ANG-001 graduates (idx 0 = Gunawan)
   const gradeConfigs = [
     { regIdx: 0, theory: 88, physical: 82, special: 79 },   // Gunawan - LULUS
@@ -144,6 +155,12 @@ async function main() {
     if (!reg) continue;
     const avg = (g.theory + g.physical + g.special) / 3;
     const finalStatus = avg >= 70 ? "LULUS" : "TIDAK_LULUS";
+    // Generate random per-subject scores
+    const subjectScores: Record<string, number> = {};
+    for (const subj of subjectNames) {
+      const base = Math.round((g.theory + g.physical + g.special) / 3);
+      subjectScores[subj] = Math.max(0, Math.min(100, base + Math.round((Math.random() - 0.5) * 20)));
+    }
     const existing = await prisma.grade.findUnique({ where: { registrantId: reg.id } });
     if (!existing) {
       await prisma.grade.create({
@@ -152,6 +169,7 @@ async function main() {
           theoryScore: g.theory,
           physicalScore: g.physical,
           specialSkillsScore: g.special,
+          subjectScores,
           finalStatus,
           updatedBy: admin.id,
         },
@@ -224,6 +242,76 @@ async function main() {
 
   console.log("\n🎉 Seed selesai!");
   console.log("─────────────────────────────────────────");
+
+  // ─── SCHEDULE ─────────────────────────────────────────────────────────────
+  const schedBatch = await prisma.trainingBatch.findUnique({ where: { id: "00000000-0000-0000-0000-000000000003" } });
+  const schedBatchId = schedBatch!.id;
+
+  const scheduleData = [
+    { day: "Senin", subject: "Hukum & Perundang-undangan", instructor: "Dr. Bambang Suharto", room: "Ruang A", start: "08:00", end: "10:00", type: "Teori" },
+    { day: "Senin", subject: "Etika Profesi Satpam", instructor: "Drs. Wahyu Santoso", room: "Ruang A", start: "10:15", end: "12:15", type: "Teori" },
+    { day: "Selasa", subject: "Teknik Pengamanan", instructor: "AKP Hendra Gunawan", room: "Ruang B", start: "08:00", end: "10:00", type: "Teori & Praktik" },
+    { day: "Selasa", subject: "Bela Diri Dasar", instructor: "Kapten Rachmat Hidayat", room: "Lapangan", start: "10:15", end: "12:15", type: "Praktik" },
+    { day: "Rabu", subject: "P3K", instructor: "dr. Sari Kusumawati", room: "Ruang A", start: "08:00", end: "10:00", type: "Teori & Praktik" },
+    { day: "Rabu", subject: "Kebakaran & Evakuasi", instructor: "Ir. Agus Priyono", room: "Halaman", start: "10:15", end: "12:15", type: "Praktik" },
+    { day: "Kamis", subject: "Hukum & Perundang-undangan", instructor: "Dr. Bambang Suharto", room: "Ruang A", start: "08:00", end: "10:00", type: "Teori" },
+    { day: "Kamis", subject: "Penggunaan Alat Komunikasi", instructor: "AKP Hendra Gunawan", room: "Lab Kom", start: "10:15", end: "12:15", type: "Teori & Praktik" },
+    { day: "Jumat", subject: "Bela Diri Dasar", instructor: "Kapten Rachmat Hidayat", room: "Lapangan", start: "07:30", end: "10:00", type: "Praktik" },
+    { day: "Jumat", subject: "Teknik Pengamanan", instructor: "AKP Hendra Gunawan", room: "Ruang B", start: "10:15", end: "12:15", type: "Teori & Praktik" },
+  ];
+
+  let scheduleCount = 0;
+  for (const s of scheduleData) {
+    const existing = await prisma.schedule.findFirst({ where: { batchId: schedBatchId, day: s.day, start: s.start, subject: s.subject } });
+    if (!existing) {
+      await prisma.schedule.create({ data: { ...s, batchId: schedBatchId } });
+      scheduleCount++;
+    }
+  }
+
+  console.log(`  Schedules: ${scheduleCount} scheduled`);
+  console.log("─────────────────────────────────────────");
+
+  // ─── ATTENDANCE ────────────────────────────────────────────────────────────
+  const batch3Registrants = await prisma.registrant.findMany({
+    where: { batchId: schedBatchId, statusRegistration: "APPROVED" },
+    include: { user: { select: { name: true } } },
+  });
+
+  const attendanceSeed = [
+    { name: "Ahmad Fauzi Rahmanto", checkIn: "08:05", checkOut: "16:10", status: "LATE" },
+    { name: "Siti Nurhaliza Putri", checkIn: "07:58", checkOut: "16:02", status: "PRESENT" },
+    { name: "Eko Prasetyo Nugroho", checkIn: null, checkOut: null, status: "ABSENT" },
+    { name: "Fitri Anggraeni Sari", checkIn: "07:50", checkOut: "16:00", status: "PRESENT" },
+    { name: "Rudi Hartono Putra", checkIn: "08:15", checkOut: "16:05", status: "LATE" },
+    { name: "Maya Sari Dewanti", checkIn: "07:45", checkOut: "16:00", status: "PRESENT" },
+    { name: "Irwan Setiabudi", checkIn: null, checkOut: null, status: "ABSENT" },
+    { name: "Lena Wulandari", checkIn: "07:52", checkOut: "16:00", status: "PRESENT" },
+  ];
+
+  let attCount = 0;
+  for (const a of attendanceSeed) {
+    const reg = batch3Registrants.find(r => r.user.name === a.name);
+    if (!reg) continue;
+    const existingAtt = await prisma.attendance.findFirst({
+      where: { registrantId: reg.id, batchId: schedBatchId, date: new Date("2024-07-01") },
+    });
+    if (!existingAtt) {
+      await prisma.attendance.create({
+        data: {
+          registrantId: reg.id,
+          batchId: schedBatchId,
+          date: new Date("2024-07-01"),
+          status: a.status,
+          checkIn: a.checkIn,
+          checkOut: a.checkOut,
+        },
+      });
+      attCount++;
+    }
+  }
+
+  console.log(`  Attendance: ${attCount} records seeded`);
   console.log("Login credentials:");
   console.log("  admin@stms.id      / password123  (ADMIN_PUSDIKLAT)");
   console.log("  polda@stms.id      / password123  (POLDA_VERIFICATOR)");

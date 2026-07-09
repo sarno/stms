@@ -5,21 +5,21 @@
         <div class="p-2.5 rounded-lg flex-shrink-0 bg-amber-50 text-amber-600"><Clock :size="18" /></div>
         <div class="min-w-0 flex-1">
           <p class="text-xs text-slate-500 font-medium leading-tight">Menunggu Verifikasi</p>
-          <p class="text-2xl font-semibold text-slate-900 mt-0.5 leading-none tracking-tight">{{ remaining.length }}</p>
+          <p class="text-2xl font-semibold text-slate-900 mt-0.5 leading-none tracking-tight">{{ pendingGroups.length }}</p>
         </div>
       </div>
       <div class="bg-white rounded-xl border border-slate-200 p-5 flex items-start gap-3.5 hover:shadow-sm transition-shadow">
         <div class="p-2.5 rounded-lg flex-shrink-0 bg-emerald-50 text-emerald-600"><CheckCircle :size="18" /></div>
         <div class="min-w-0 flex-1">
           <p class="text-xs text-slate-500 font-medium leading-tight">Disetujui</p>
-          <p class="text-2xl font-semibold text-slate-900 mt-0.5 leading-none tracking-tight">{{ approvedIds.length }}</p>
+          <p class="text-2xl font-semibold text-slate-900 mt-0.5 leading-none tracking-tight">{{ approvedRegistrants.size }}</p>
         </div>
       </div>
       <div class="bg-white rounded-xl border border-slate-200 p-5 flex items-start gap-3.5 hover:shadow-sm transition-shadow">
         <div class="p-2.5 rounded-lg flex-shrink-0 bg-red-50 text-red-600"><XCircle :size="18" /></div>
         <div class="min-w-0 flex-1">
           <p class="text-xs text-slate-500 font-medium leading-tight">Ditolak</p>
-          <p class="text-2xl font-semibold text-slate-900 mt-0.5 leading-none tracking-tight">{{ rejectedIds.length }}</p>
+          <p class="text-2xl font-semibold text-slate-900 mt-0.5 leading-none tracking-tight">{{ rejectedRegistrants.size }}</p>
         </div>
       </div>
     </div>
@@ -38,33 +38,41 @@
             <option value="APPROVED">Disetujui</option>
             <option value="REJECTED">Ditolak</option>
           </select>
-          <span class="text-xs text-slate-400 ml-auto">{{ remaining.length }} dokumen</span>
+          <span class="text-xs text-slate-400 ml-auto">{{ pendingGroups.length }} peserta</span>
         </div>
         <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
           <div class="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
-            <span class="text-xs font-bold text-slate-700">Dokumen Menunggu Review</span>
-            <span class="text-xs text-slate-400">{{ remaining.length }} dokumen</span>
+            <span class="text-xs font-bold text-slate-700">Peserta Menunggu Review</span>
+            <span class="text-xs text-slate-400">{{ pendingGroups.length }} peserta</span>
           </div>
           <div v-if="loading" class="flex items-center justify-center py-16">
             <div class="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
           </div>
-          <div v-else-if="remaining.length === 0" class="flex flex-col items-center justify-center py-12 text-slate-300">
+          <div v-else-if="pendingGroups.length === 0" class="flex flex-col items-center justify-center py-12 text-slate-300">
             <CheckCircle :size="32" class="mb-2 text-emerald-300" />
             <p class="text-sm font-semibold text-slate-500">Semua dokumen telah diverifikasi</p>
           </div>
           <div v-else class="divide-y divide-slate-100">
-            <div v-for="doc in remaining" :key="doc.id"
-              @click="selected = selected?.id === doc.id ? null : doc"
-              :class="['flex items-center gap-4 px-4 py-3.5 hover:bg-slate-50 cursor-pointer transition-colors', selected?.id === doc.id && 'bg-blue-50']">
-              <div class="w-9 h-9 rounded-lg bg-slate-100 flex items-center justify-center flex-shrink-0">
-                <FileText :size="16" class="text-slate-400" />
+            <div v-for="grp in pendingGroups" :key="grp.registrantId"
+              @click="selected = selected?.registrantId === grp.registrantId ? null : grp"
+              :class="['px-4 py-3.5 hover:bg-slate-50 cursor-pointer transition-colors', selected?.registrantId === grp.registrantId && 'bg-blue-50']">
+              <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-lg bg-slate-100 flex items-center justify-center flex-shrink-0">
+                  <FileText :size="16" class="text-slate-400" />
+                </div>
+                <div class="flex-1 min-w-0">
+                  <p class="text-sm font-semibold text-slate-900">{{ grp.participant }}</p>
+                  <p class="text-xs text-slate-500 mt-0.5">{{ grp.regNo }} · {{ grp.batch }}</p>
+                </div>
+                <span class="text-[10px] text-slate-400 whitespace-nowrap">{{ grp.docs.length }} dokumen</span>
+                <ChevronRight :size="14" class="text-slate-300 flex-shrink-0" />
               </div>
-              <div class="flex-1 min-w-0">
-                <p class="text-sm font-semibold text-slate-900">{{ doc.docType }}</p>
-                <p class="text-xs text-slate-500 mt-0.5 truncate">{{ doc.participant }} · {{ doc.regNo }}</p>
-                <p class="text-[10px] text-slate-400">{{ doc.batch }} · {{ doc.uploadDate }} · {{ doc.fileSize }}</p>
+              <div class="flex gap-1.5 mt-2 ml-12">
+                <span v-for="d in grp.docs" :key="d.id"
+                  class="px-1.5 py-0.5 text-[10px] rounded-md border border-slate-200 text-slate-500 bg-slate-50 font-medium">
+                  {{ d.docType }}
+                </span>
               </div>
-              <ChevronRight :size="14" class="text-slate-300 flex-shrink-0" />
             </div>
           </div>
         </div>
@@ -78,21 +86,24 @@
             <button @click="selected = null" class="text-slate-300 hover:text-slate-500 cursor-pointer"><X :size="14" /></button>
           </div>
           <div class="p-4 space-y-4">
-            <!-- Simulated doc preview -->
-            <div class="h-48 bg-slate-100 rounded-lg flex flex-col items-center justify-center text-slate-400 border-2 border-dashed border-slate-200">
-              <FileText :size="28" class="mb-2 text-slate-300" />
-              <p class="text-xs font-semibold text-slate-500">{{ selected.docType }}</p>
-              <p class="text-[10px] text-slate-400 mt-0.5">{{ selected.fileSize }}</p>
-              <a v-if="selected.fileUrl" :href="selected.fileUrl" target="_blank"
-                class="mt-3 text-xs text-blue-600 hover:underline font-medium flex items-center gap-1">
-                <Eye :size="11" /> Buka dokumen
-              </a>
-              <button v-else class="mt-3 text-xs text-blue-600 hover:underline font-medium flex items-center gap-1 cursor-pointer">
-                <Eye :size="11" /> Buka dokumen
-              </button>
+            <!-- Document list for selected registrant -->
+            <div v-for="doc in selected.docs" :key="doc.id" class="border border-slate-200 rounded-lg p-3 space-y-2">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-slate-700">{{ doc.docType }}</span>
+                <span class="text-[10px] text-slate-400">{{ doc.fileSize }}</span>
+              </div>
+              <div class="h-32 bg-slate-100 rounded-lg flex flex-col items-center justify-center text-slate-400 border-2 border-dashed border-slate-200">
+                <FileText :size="24" class="mb-1 text-slate-300" />
+                <a v-if="doc.fileUrl" :href="doc.fileUrl" target="_blank"
+                  class="mt-1.5 text-xs text-blue-600 hover:underline font-medium flex items-center gap-1">
+                  <Eye :size="11" /> Buka dokumen
+                </a>
+                <span v-else class="text-[10px] text-slate-400">Dokumen tidak tersedia</span>
+              </div>
             </div>
+            <!-- Info -->
             <div class="space-y-2">
-              <div v-for="[k, v] in docInfo" :key="k" class="flex justify-between text-xs">
+              <div v-for="[k, v] in groupInfo" :key="k" class="flex justify-between text-xs">
                 <span class="text-slate-400">{{ k }}</span>
                 <span class="text-slate-800 font-semibold text-right">{{ v }}</span>
               </div>
@@ -124,61 +135,63 @@ import { ref, computed, onMounted } from 'vue'
 import axios from 'axios'
 import { Clock, CheckCircle, XCircle, FileText, ChevronRight, X, Eye } from 'lucide-vue-next'
 
-interface PendingDoc {
+interface DocItem {
   id: number
-  registrantId: string
   docType: string
-  participant: string
-  regNo: string
-  batch: string
-  uploadDate: string
   fileSize: string
   fileUrl?: string
-  status: string
 }
 
-const selected = ref<PendingDoc | null>(null)
-const approvedIds = ref<number[]>([])
-const rejectedIds = ref<number[]>([])
+interface DocGroup {
+  registrantId: string
+  regNo: string
+  participant: string
+  batch: string
+  uploadDate: string
+  docs: DocItem[]
+}
+
+const selected = ref<DocGroup | null>(null)
+const approvedRegistrants = ref<Set<string>>(new Set())
+const rejectedRegistrants = ref<Set<string>>(new Set())
 const note = ref('')
 const loading = ref(true)
 const filterBatch = ref('')
 const filterStatus = ref('')
 const batches = ref<any[]>([])
-const documents = ref<PendingDoc[]>([])
+const groups = ref<DocGroup[]>([])
 
-const remaining = computed(() =>
-  documents.value.filter(d =>
-    !approvedIds.value.includes(d.id) && !rejectedIds.value.includes(d.id)
+const pendingGroups = computed(() =>
+  groups.value.filter(g =>
+    !approvedRegistrants.value.has(g.registrantId) && !rejectedRegistrants.value.has(g.registrantId)
   )
 )
 
-const docInfo = computed(() => {
+const groupInfo = computed(() => {
   if (!selected.value) return []
   const s = selected.value
   return [
-    ['Jenis Dokumen', s.docType],
     ['Peserta', s.participant],
     ['No. Registrasi', s.regNo],
     ['Angkatan', s.batch],
-    ['Tanggal Upload', s.uploadDate],
-    ['Ukuran File', s.fileSize],
+    ['Tanggal Daftar', s.uploadDate],
+    ['Jumlah Dokumen', `${s.docs.length} dokumen`],
   ]
 })
 
-async function doApprove(doc: PendingDoc) {
+async function doApprove(grp: DocGroup) {
   try {
-    await axios.patch(`/api/v1/registration/${doc.registrantId}/status`, { status: 'APPROVED' })
-    approvedIds.value.push(doc.id)
+    await axios.patch(`/api/v1/registration/${grp.registrantId}/status`, { status: 'APPROVED' })
+    approvedRegistrants.value.add(grp.registrantId)
     selected.value = null
     note.value = ''
   } catch { /* silent */ }
 }
 
-async function doReject(doc: PendingDoc) {
+async function doReject(grp: DocGroup) {
   try {
-    await axios.patch(`/api/v1/registration/${doc.registrantId}/status`, { status: 'REJECTED', reason: note.value || 'Dokumen tidak memenuhi syarat' })
-    rejectedIds.value.push(doc.id)
+    await axios.patch(`/api/v1/registration/${grp.registrantId}/status`, { status: 'REJECTED', reason: note.value || 'Dokumen tidak memenuhi syarat' })
+    rejectedRegistrants.value.add(grp.registrantId)
     selected.value = null
     note.value = ''
   } catch { /* silent */ }
@@ -193,32 +206,40 @@ onMounted(async () => {
     ])
     batches.value = batchRes.data
 
-    const allDocs: PendingDoc[] = []
+    const dtMap: Record<string, string> = {
+      ktp: 'KTP', kk: 'Kartu Keluarga', ijazah: 'Ijazah',
+      skck: 'SKCK', foto: 'Pas Foto', sehat: 'Surat Sehat',
+    }
+
+    const allGroups: DocGroup[] = []
     for (const r of regRes.data) {
       const urls = r.documentUrls || {}
+      const docs: DocItem[] = []
+      let idx = 0
       for (const [key, url] of Object.entries(urls)) {
-        const dtMap: Record<string, string> = {
-          ktp: 'KTP', kk: 'Kartu Keluarga', ijazah: 'Ijazah',
-          skck: 'SKCK', foto: 'Pas Foto', sehat: 'Surat Sehat',
-        }
-        allDocs.push({
-          id: allDocs.length + 1,
-          registrantId: r.id,
+        idx++
+        docs.push({
+          id: idx,
           docType: dtMap[key] || key.toUpperCase(),
-          participant: r.user?.name || '-',
-          regNo: `REG-${String(r.id).slice(0, 8).toUpperCase()}`,
-          batch: r.batch?.batchName || '-',
-          uploadDate: new Date(r.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }),
           fileSize: typeof url === 'string' && url.includes('.') ? url.split('.').pop()!.toUpperCase() : 'PDF',
           fileUrl: typeof url === 'string' ? url : undefined,
-          status: r.statusRegistration,
         })
       }
+      if (docs.length === 0) continue
+
+      allGroups.push({
+        registrantId: r.id,
+        regNo: `REG-${String(r.id).slice(0, 8).toUpperCase()}`,
+        participant: r.user?.name || '-',
+        batch: r.batch?.batchName || '-',
+        uploadDate: new Date(r.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }),
+        docs,
+      })
     }
-    documents.value = allDocs
+    groups.value = allGroups
   } catch {
     batches.value = []
-    documents.value = []
+    groups.value = []
   } finally {
     loading.value = false
   }

@@ -10,10 +10,20 @@ export const batchRoutes = new Elysia({ prefix: "/api/v1/batches" })
     if (!payload) { set.status = 401; return { error: "Token tidak valid" }; }
 
     const batches = await prisma.trainingBatch.findMany({
-      include: { _count: { select: { registrants: true } } },
+      include: {
+        _count: { select: { registrants: true } },
+        registrants: {
+          where: { grade: { finalStatus: "LULUS" } },
+          select: { id: true },
+        },
+      },
       orderBy: { startDate: "desc" },
     });
-    return batches;
+    return batches.map((b) => ({
+      ...b,
+      graduatesCount: b.registrants.length,
+      registrants: undefined,
+    }));
   })
   .post("/", async ({ body, jwt, set, headers }) => {
     const authHeader = headers["authorization"];
@@ -21,10 +31,11 @@ export const batchRoutes = new Elysia({ prefix: "/api/v1/batches" })
     const payload = await jwt.verify(authHeader.slice(7));
     if (!payload || payload.role !== "ADMIN_PUSDIKLAT") { set.status = 403; return { error: "Akses ditolak" }; }
 
-    const { batch_name, start_date, end_date, quota, status } = body as any;
+    const { batch_name, type, start_date, end_date, quota, status } = body as any;
     const batch = await prisma.trainingBatch.create({
       data: {
         batchName: batch_name,
+        type: type || "Satpam Umum",
         startDate: new Date(start_date),
         endDate: new Date(end_date),
         quota: parseInt(quota),
@@ -40,11 +51,12 @@ export const batchRoutes = new Elysia({ prefix: "/api/v1/batches" })
     const payload = await jwt.verify(authHeader.slice(7));
     if (!payload || payload.role !== "ADMIN_PUSDIKLAT") { set.status = 403; return { error: "Akses ditolak" }; }
 
-    const { batch_name, start_date, end_date, quota, status } = body as any;
+    const { batch_name, type, start_date, end_date, quota, status } = body as any;
     const batch = await prisma.trainingBatch.update({
       where: { id: params.id },
       data: {
         batchName: batch_name,
+        type: type || "Satpam Umum",
         startDate: new Date(start_date),
         endDate: new Date(end_date),
         quota: parseInt(quota),
