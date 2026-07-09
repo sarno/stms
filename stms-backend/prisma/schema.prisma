@@ -1,0 +1,102 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String       @id @default(uuid()) @db.Uuid
+  name         String       @db.VarChar(150)
+  email        String       @unique @db.VarChar(100)
+  passwordHash String       @map("password_hash") @db.VarChar(255)
+  phoneNumber  String       @map("phone_number") @db.VarChar(20)
+  role         String       @db.VarChar(30)
+  createdAt    DateTime     @default(now()) @map("created_at") @db.Timestamp()
+
+  registrants    Registrant[]
+  gradesUpdated  Grade[]       @relation("GradesUpdatedBy")
+  certificates   Certificate[] @relation("PoldaApprover")
+  auditTrails    AuditTrail[]
+
+  @@map("users")
+}
+
+model TrainingBatch {
+  id        String   @id @default(uuid()) @db.Uuid
+  batchName String   @map("batch_name") @db.VarChar(100)
+  startDate DateTime @map("start_date") @db.Date
+  endDate   DateTime @map("end_date") @db.Date
+  quota     Int
+  status    String   @default("OPEN") @db.VarChar(20)
+
+  registrants Registrant[]
+
+  @@map("training_batches")
+}
+
+model Registrant {
+  id                 String   @id @default(uuid()) @db.Uuid
+  userId             String   @map("user_id") @db.Uuid
+  batchId            String   @map("batch_id") @db.Uuid
+  ktpNumber          String   @map("ktp_number") @db.VarChar(16)
+  educationLevel     String   @map("education_level") @db.VarChar(30)
+  documentUrls       Json     @map("document_urls")
+  statusRegistration String   @default("PENDING_VERIFICATION") @map("status_registration") @db.VarChar(30)
+  paymentStatus      String   @default("UNPAID") @map("payment_status") @db.VarChar(30)
+  createdAt          DateTime @default(now()) @map("created_at") @db.Timestamp()
+
+  user        User          @relation(fields: [userId], references: [id])
+  batch       TrainingBatch @relation(fields: [batchId], references: [id])
+  grade       Grade?
+  certificate Certificate?
+
+  @@map("registrants")
+}
+
+model Grade {
+  id                 String   @id @default(uuid()) @db.Uuid
+  registrantId       String   @unique @map("registrant_id") @db.Uuid
+  theoryScore        Decimal  @default(0.0) @map("theory_score") @db.Decimal(5, 2)
+  physicalScore      Decimal  @default(0.0) @map("physical_score") @db.Decimal(5, 2)
+  specialSkillsScore Decimal  @default(0.0) @map("special_skills_score") @db.Decimal(5, 2)
+  finalStatus        String   @default("PENDING") @map("final_status") @db.VarChar(20)
+  updatedBy          String   @map("updated_by") @db.Uuid
+
+  registrant Registrant @relation(fields: [registrantId], references: [id])
+  updater    User       @relation("GradesUpdatedBy", fields: [updatedBy], references: [id])
+
+  @@map("grades")
+}
+
+model Certificate {
+  id                String   @id @default(uuid()) @db.Uuid
+  registrantId      String   @unique @map("registrant_id") @db.Uuid
+  certificateNumber String   @unique @map("certificate_number") @db.VarChar(100)
+  verificationToken String   @unique @map("verification_token") @db.VarChar(64)
+  filePath          String   @map("file_path")
+  issuedAt          DateTime @default(now()) @map("issued_at") @db.Timestamp()
+  poldaApproverId   String   @map("polda_approver_id") @db.Uuid
+
+  registrant    Registrant @relation(fields: [registrantId], references: [id])
+  poldaApprover User       @relation("PoldaApprover", fields: [poldaApproverId], references: [id])
+
+  @@map("certificates")
+}
+
+model AuditTrail {
+  id         String   @id @default(uuid()) @db.Uuid
+  userId     String   @map("user_id") @db.Uuid
+  action     String   @db.VarChar(100)
+  tableName  String   @map("table_name") @db.VarChar(50)
+  beforeData Json?    @map("before_data")
+  afterData  Json?    @map("after_data")
+  ipAddress  String?  @map("ip_address") @db.VarChar(45)
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamp()
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("audit_trails")
+}
