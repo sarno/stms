@@ -77,7 +77,7 @@
                 <p class="text-sm font-medium text-slate-400">Tidak ada data ditemukan</p>
               </td>
             </tr>
-            <tr v-for="p in filtered" :key="p.id" class="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
+            <tr v-for="p in paginatedItems" :key="p.id" class="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
               <td class="px-3 py-2.5">
                 <input type="checkbox" :checked="selectedIds.includes(p.id)" @change="toggleSelect(p.id)" class="rounded border-slate-300 text-blue-600 cursor-pointer" />
               </td>
@@ -111,6 +111,7 @@
             </tr>
           </tbody>
         </table>
+        <Pagination v-model:currentPage="currentPage" :totalItems="totalItems" :pageSize="10" />
         <div class="px-4 py-2.5 border-t border-slate-100 flex items-center justify-between text-xs text-slate-400">
           <span>Menampilkan {{ filtered.length }} dari {{ participants.length }} peserta</span>
         </div>
@@ -229,9 +230,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, reactive } from 'vue'
+import { ref, computed, onMounted, reactive, watch } from 'vue'
 import axios from 'axios'
 import Badge from '@/components/ui/Badge.vue'
+import { usePagination } from '@/composables/usePagination'
+import Pagination from '@/components/ui/Pagination.vue'
 import { Search, Filter, Download, Eye, Edit, Trash2, Users2, X } from 'lucide-vue-next'
 
 interface Participant {
@@ -282,6 +285,10 @@ const filtered = computed(() => {
     return matchSearch && matchBatch && matchStatus
   })
 })
+
+const { currentPage, totalItems, paginatedItems, resetPage } = usePagination(filtered, 10)
+
+watch([search, filterBatch, filterStatus], () => resetPage())
 
 const allSelected = computed(() => filtered.value.length > 0 && filtered.value.every(p => selectedIds.value.includes(p.id)))
 

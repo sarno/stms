@@ -44,7 +44,7 @@
             <tr v-if="filtered.length === 0">
               <td colspan="5" class="text-center py-12 text-slate-400">Tidak ada data sertifikat</td>
             </tr>
-            <tr v-for="c in filtered" :key="c.id"
+            <tr v-for="c in paginatedItems" :key="c.id"
               @click="selectedCert = c"
               :class="['border-b border-slate-50 hover:bg-blue-50/30 transition-colors cursor-pointer', selectedCert?.id === c.id ? 'bg-blue-50/40' : '']">
               <td class="px-4 py-3 font-mono font-semibold text-blue-700">{{ c.certNo }}</td>
@@ -64,6 +64,7 @@
             </tr>
           </tbody>
         </table>
+        <Pagination v-model:currentPage="currentPage" :totalItems="totalItems" :pageSize="10" />
       </div>
 
       <!-- Side preview panel -->
@@ -132,9 +133,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, reactive } from 'vue'
+import { ref, computed, onMounted, reactive, watch } from 'vue'
 import axios from 'axios'
 import StatCard from '@/components/ui/StatCard.vue'
+import { usePagination } from '@/composables/usePagination'
+import Pagination from '@/components/ui/Pagination.vue'
 import { Award, Printer, RefreshCw, ScanLine, Clock, Search, Plus, Eye, Download, QrCode, X, Shield } from 'lucide-vue-next'
 
 interface Cert {
@@ -172,6 +175,10 @@ const filtered = computed(() => {
   const q = search.value.toLowerCase()
   return certs.value.filter(c => !q || c.participant.toLowerCase().includes(q) || c.certNo.toLowerCase().includes(q))
 })
+
+const { currentPage, totalItems, paginatedItems, resetPage } = usePagination(filtered, 10)
+
+watch(search, () => resetPage())
 
 function certMeta(c: Cert) {
   return [

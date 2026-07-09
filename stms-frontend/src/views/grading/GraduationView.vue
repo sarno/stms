@@ -48,13 +48,13 @@
           <tr v-if="candidates.length === 0">
             <td colspan="8" class="text-center py-12 text-slate-400">Tidak ada data kandidat</td>
           </tr>
-          <tr v-for="(c, i) in candidates" :key="c.id" class="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
+          <tr v-for="(c, i) in paginatedItems" :key="c.id" class="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
             <td class="px-3 py-3">
               <input v-if="c.eligible && !c.approved" type="checkbox"
                 :checked="selectedIds.includes(c.id)" @change="toggleSelect(c.id)"
                 class="rounded border-slate-300 text-blue-600 cursor-pointer" />
             </td>
-            <td class="px-4 py-3 text-slate-400">{{ i + 1 }}</td>
+            <td class="px-4 py-3 text-slate-400">{{ (currentPage - 1) * 10 + Number(i) + 1 }}</td>
             <td class="px-4 py-3 font-medium text-slate-800">{{ c.name }}</td>
             <td class="px-4 py-3 font-mono text-slate-500">{{ c.regNo }}</td>
             <td class="px-4 py-3">
@@ -87,6 +87,7 @@
           </tr>
         </tbody>
       </table>
+      <Pagination v-model:currentPage="currentPage" :totalItems="totalItems" :pageSize="10" />
     </div>
 
     <!-- Confirm Approve Modal -->
@@ -109,9 +110,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import axios from 'axios'
 import Badge from '@/components/ui/Badge.vue'
+import { usePagination } from '@/composables/usePagination'
+import Pagination from '@/components/ui/Pagination.vue'
 import { GraduationCap, CheckCircle, XCircle } from 'lucide-vue-next'
 
 interface Candidate {
@@ -128,6 +131,13 @@ const batches = ref<any[]>([])
 const selectedBatch = ref('')
 const loading = ref(false)
 const candidates = ref<Candidate[]>([])
+
+const filtered = computed(() => candidates.value)
+
+const { currentPage, totalItems, paginatedItems, resetPage } = usePagination(filtered, 10)
+
+watch(selectedBatch, () => resetPage())
+
 const selectedIds = ref<number[]>([])
 const showConfirm = ref(false)
 const approving = ref(false)

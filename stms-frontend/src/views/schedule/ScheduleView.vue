@@ -40,7 +40,7 @@
               <p class="text-slate-400">Tidak ada jadwal untuk hari ini</p>
             </td>
           </tr>
-          <tr v-for="s in filteredSchedule" :key="s.id" class="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
+          <tr v-for="s in paginatedItems" :key="s.id" class="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
             <td class="px-4 py-3 font-mono text-slate-600 whitespace-nowrap">{{ s.start }} - {{ s.end }}</td>
             <td class="px-4 py-3 font-medium text-slate-800">{{ s.subject }}</td>
             <td class="px-4 py-3 text-slate-600">{{ s.instructor }}</td>
@@ -60,6 +60,7 @@
           </tr>
         </tbody>
       </table>
+      <Pagination v-model:currentPage="currentPage" :totalItems="totalItems" :pageSize="10" />
     </div>
 
     <!-- Create/Edit Modal -->
@@ -143,8 +144,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, reactive } from 'vue'
+import { ref, computed, onMounted, reactive, watch } from 'vue'
 import axios from 'axios'
+import { usePagination } from '@/composables/usePagination'
+import Pagination from '@/components/ui/Pagination.vue'
 import { Calendar, Plus, Edit, Trash2, X } from 'lucide-vue-next'
 
 const days = [
@@ -168,6 +171,10 @@ const modalError = ref('')
 const form = reactive({ day: 'senin', subject: '', instructor: '', room: '', start: '', end: '', type: 'Teori' })
 
 const filteredSchedule = computed(() => schedules.value.filter(s => s.day === activeDay.value))
+
+const { currentPage, totalItems, paginatedItems, resetPage } = usePagination(filteredSchedule, 10)
+
+watch(activeDay, () => resetPage())
 
 function openCreate() {
   editId.value = null

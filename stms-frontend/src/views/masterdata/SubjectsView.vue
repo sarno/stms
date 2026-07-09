@@ -37,7 +37,7 @@
           <tr v-if="filtered.length === 0">
             <td colspan="8" class="text-center py-12 text-slate-400">Tidak ada data</td>
           </tr>
-          <tr v-for="s in filtered" :key="s.id" class="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
+          <tr v-for="s in paginatedItems" :key="s.id" class="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
             <td class="px-4 py-3 font-mono font-semibold text-blue-700">{{ s.code }}</td>
             <td class="px-4 py-3 font-medium text-slate-800">{{ s.name }}</td>
             <td class="px-4 py-3 text-slate-500">{{ s.curriculum }}</td>
@@ -61,6 +61,7 @@
           </tr>
         </tbody>
       </table>
+      <Pagination v-model:currentPage="currentPage" :totalItems="totalItems" :pageSize="10" />
     </div>
 
     <!-- Create/Edit Modal -->
@@ -144,8 +145,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, reactive } from 'vue'
+import { ref, computed, onMounted, reactive, watch } from 'vue'
 import axios from 'axios'
+import { usePagination } from '@/composables/usePagination'
+import Pagination from '@/components/ui/Pagination.vue'
 import { Search, Plus, Edit, Trash2, X } from 'lucide-vue-next'
 
 const subjects = ref<any[]>([])
@@ -164,6 +167,10 @@ const filtered = computed(() => {
   const q = search.value.toLowerCase()
   return subjects.value.filter(s => !q || s.name?.toLowerCase().includes(q) || s.code?.toLowerCase().includes(q) || s.curriculum?.toLowerCase().includes(q))
 })
+
+const { currentPage, totalItems, paginatedItems, resetPage } = usePagination(filtered, 10)
+
+watch(search, () => resetPage())
 
 function openCreate() {
   editId.value = null

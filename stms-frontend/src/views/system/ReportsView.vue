@@ -33,7 +33,9 @@
             <p class="text-xs text-slate-400 mt-0.5">Berdasarkan gender, Jan–Jul 2024</p>
           </div>
         </div>
-        <Bar :data="genderChartData" :options="barOptions" class="h-52" />
+        <div style="position: relative; height: 220px;">
+          <Bar :data="genderChartData" :options="barOptions" />
+        </div>
         <div class="flex items-center gap-5 mt-3 pt-3 border-t border-slate-100">
           <div class="flex items-center gap-1.5 text-xs text-slate-500">
             <div class="w-3 h-3 rounded-sm bg-blue-500" /> Laki-laki
@@ -52,7 +54,9 @@
             <p class="text-xs text-slate-400 mt-0.5">Dalam jutaan rupiah, Jan–Jul 2024</p>
           </div>
         </div>
-        <Bar :data="revenueChartData" :options="revenueOptions" class="h-52" />
+        <div style="position: relative; height: 220px;">
+          <Bar :data="revenueChartData" :options="revenueOptions" />
+        </div>
         <div class="flex items-center gap-5 mt-3 pt-3 border-t border-slate-100">
           <div class="flex items-center gap-1.5 text-xs text-slate-500">
             <div class="w-3 h-3 rounded-sm bg-blue-600" /> Pendapatan

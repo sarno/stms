@@ -9,6 +9,7 @@ import { poldaRoutes } from "./domains/Training";
 import { batchRoutes, userRoutes, auditRoutes } from "./domains/Training/crud";
 import { masterdataRoutes } from "./domains/Training/masterdata";
 import { attendanceRoutes, scheduleRoutes } from "./domains/Training/attendance";
+import { dashboardRoutes } from "./domains/Training/dashboard";
 
 export const app = new Elysia()
   .use(jwt({ name: "jwt", secret: process.env.JWT_SECRET || "stms-jwt-secret-dev-2026" }))
@@ -28,6 +29,7 @@ export const app = new Elysia()
   .use(masterdataRoutes)
   .use(attendanceRoutes)
   .use(scheduleRoutes)
+  .use(dashboardRoutes)
   .get("/", () => ({ message: "STMS API v1" }));
 
 if (import.meta.main) {

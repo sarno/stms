@@ -31,7 +31,7 @@
           </tr>
         </thead>
         <tbody>
-          <tr v-for="r in graduates" :key="r.id" class="border-b border-gray-100 hover:bg-gray-50">
+          <tr v-for="r in paginatedItems" :key="r.id" class="border-b border-gray-100 hover:bg-gray-50">
             <td class="px-4 py-3 font-medium">{{ r.user.name }}</td>
             <td class="px-4 py-3 text-center">{{ r.grade?.theoryScore ?? '—' }}</td>
             <td class="px-4 py-3 text-center">{{ r.grade?.physicalScore ?? '—' }}</td>
@@ -59,6 +59,7 @@
           </tr>
         </tbody>
       </table>
+      <Pagination v-model:currentPage="currentPage" :totalItems="totalItems" :pageSize="10" />
     </div>
 
     <div v-if="issueModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
@@ -82,11 +83,18 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import axios from 'axios'
+import { usePagination } from '@/composables/usePagination'
+import Pagination from '@/components/ui/Pagination.vue'
 
 const batches = ref<any[]>([])
 const graduates = ref<any[]>([])
+
+const filtered = computed(() => graduates.value)
+
+const { currentPage, totalItems, paginatedItems, resetPage } = usePagination(filtered, 10)
+
 const selectedBatch = ref('')
 const loading = ref(false)
 const issueModal = ref(false)
@@ -94,6 +102,8 @@ const issueTarget = ref<any>(null)
 const certNumber = ref('')
 const issueError = ref('')
 const issuing = ref(false)
+
+watch(selectedBatch, () => resetPage())
 
 onMounted(async () => {
   const res = await axios.get('/api/v1/polda/batches')

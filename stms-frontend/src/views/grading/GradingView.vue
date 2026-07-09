@@ -47,8 +47,8 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="(g, i) in grades" :key="g.id" class="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
-              <td class="px-4 py-2.5 text-slate-400">{{ i + 1 }}</td>
+            <tr v-for="(g, i) in paginatedItems" :key="g.id" class="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
+              <td class="px-4 py-2.5 text-slate-400">{{ (currentPage - 1) * 10 + Number(i) + 1 }}</td>
               <td class="px-4 py-2.5 font-medium text-slate-800">{{ g.name }}</td>
               <td class="px-4 py-2.5 font-mono text-slate-500">{{ g.regNo }}</td>
               <td class="px-4 py-2.5">
@@ -74,6 +74,7 @@
             </tr>
           </tbody>
         </table>
+        <Pagination v-model:currentPage="currentPage" :totalItems="totalItems" :pageSize="10" />
         <div class="px-4 py-2.5 border-t border-slate-100 flex justify-end">
           <button @click="saveGrades" :disabled="saving"
             class="flex items-center gap-1.5 px-4 py-1.5 text-xs font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors cursor-pointer disabled:opacity-60">
@@ -87,9 +88,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import axios from 'axios'
 import Badge from '@/components/ui/Badge.vue'
+import { usePagination } from '@/composables/usePagination'
+import Pagination from '@/components/ui/Pagination.vue'
 import { Star } from 'lucide-vue-next'
 
 const subjectTabs = ['Semua', 'Teori', 'Fisik', 'Keahlian Khusus']
@@ -112,6 +115,12 @@ interface GradeRow {
 }
 
 const grades = ref<GradeRow[]>([])
+
+const filtered = computed(() => grades.value)
+
+const { currentPage, totalItems, paginatedItems, resetPage } = usePagination(filtered, 10)
+
+watch(selectedBatch, () => resetPage())
 
 function avg(g: GradeRow) {
   const scores = [g.theory_score, g.physical_score, g.special_skills_score].filter(s => s > 0)

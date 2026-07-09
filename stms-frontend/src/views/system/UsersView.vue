@@ -36,7 +36,7 @@
           <tr v-if="filtered.length === 0">
             <td colspan="6" class="text-center py-12 text-slate-400">Tidak ada data pengguna</td>
           </tr>
-          <tr v-for="u in filtered" :key="u.id" class="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
+          <tr v-for="u in paginatedItems" :key="u.id" class="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
             <td class="px-4 py-3">
               <div class="flex items-center gap-2">
                 <div class="w-7 h-7 rounded-full bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center flex-shrink-0 text-white font-bold text-[10px]">
@@ -62,6 +62,7 @@
           </tr>
         </tbody>
       </table>
+      <Pagination v-model:currentPage="currentPage" :totalItems="totalItems" :pageSize="10" />
     </div>
 
     <!-- Create Modal -->
@@ -177,9 +178,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, reactive } from 'vue'
+import { ref, computed, onMounted, reactive, watch } from 'vue'
 import axios from 'axios'
 import Badge from '@/components/ui/Badge.vue'
+import { usePagination } from '@/composables/usePagination'
+import Pagination from '@/components/ui/Pagination.vue'
 import { Search, Plus, Edit, Trash2, X } from 'lucide-vue-next'
 
 const users = ref<any[]>([])
@@ -206,6 +209,10 @@ const filtered = computed(() => {
   const q = search.value.toLowerCase()
   return users.value.filter(u => !q || u.name?.toLowerCase().includes(q) || u.email?.toLowerCase().includes(q))
 })
+
+const { currentPage, totalItems, paginatedItems, resetPage } = usePagination(filtered, 10)
+
+watch(search, () => resetPage())
 
 function initials(name: string) {
   return (name || '?').split(' ').slice(0, 2).map((w: string) => w[0]).join('').toUpperCase()

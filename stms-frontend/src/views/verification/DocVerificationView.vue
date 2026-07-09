@@ -41,7 +41,7 @@
           <tr v-if="filtered.length === 0">
             <td colspan="6" class="text-center py-12 text-slate-400">Tidak ada data pendaftaran</td>
           </tr>
-          <tr v-for="r in filtered" :key="r.id" class="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
+          <tr v-for="r in paginatedItems" :key="r.id" class="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
             <td class="px-4 py-3">
               <p class="font-medium text-slate-800">{{ r.fullName }}</p>
               <p class="text-slate-400 text-[10px] mt-0.5">{{ r.email || 'email@example.com' }}</p>
@@ -72,6 +72,7 @@
           </tr>
         </tbody>
       </table>
+      <Pagination v-model:currentPage="currentPage" :totalItems="totalItems" :pageSize="10" />
     </div>
 
     <!-- Reject modal -->
@@ -102,9 +103,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import axios from 'axios'
 import Badge from '@/components/ui/Badge.vue'
+import { usePagination } from '@/composables/usePagination'
+import Pagination from '@/components/ui/Pagination.vue'
 import { X } from 'lucide-vue-next'
 
 const registrants = ref<any[]>([])
@@ -122,6 +125,10 @@ const filtered = computed(() => {
     return matchBatch && matchStatus
   })
 })
+
+const { currentPage, totalItems, paginatedItems, resetPage } = usePagination(filtered, 10)
+
+watch([filterBatch, filterStatus], () => resetPage())
 
 async function approve(id: number) {
   try {

@@ -49,7 +49,7 @@
           <tr v-if="filtered.length === 0">
             <td colspan="6" class="text-center py-12 text-slate-400">Tidak ada data log</td>
           </tr>
-          <tr v-for="log in filtered" :key="log.id" class="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
+          <tr v-for="log in paginatedItems" :key="log.id" class="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
             <td class="px-4 py-3 font-mono text-slate-500 whitespace-nowrap">{{ formatTs(log.createdAt) }}</td>
             <td class="px-4 py-3 font-medium text-slate-700">{{ log.user?.name || log.user || '-' }}</td>
             <td class="px-4 py-3">
@@ -63,6 +63,7 @@
           </tr>
         </tbody>
       </table>
+      <Pagination v-model:currentPage="currentPage" :totalItems="totalItems" :pageSize="10" />
       <div class="px-4 py-2.5 border-t border-slate-100 flex items-center justify-between text-xs text-slate-400">
         <span>Menampilkan {{ filtered.length }} dari {{ logs.length }} entri</span>
       </div>
@@ -71,8 +72,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import axios from 'axios'
+import { usePagination } from '@/composables/usePagination'
+import Pagination from '@/components/ui/Pagination.vue'
 import { Search, Download } from 'lucide-vue-next'
 
 const logs = ref<any[]>([])
@@ -118,6 +121,10 @@ const filtered = computed(() => {
     return matchSearch && matchAction && matchDate
   })
 })
+
+const { currentPage, totalItems, paginatedItems, resetPage } = usePagination(filtered, 10)
+
+watch([search, filterDate, filterAction], () => resetPage())
 
 function exportCSV() {
   const headers = ['Timestamp', 'User', 'Aksi', 'Tabel', 'Detail', 'IP Address']

@@ -1,0 +1,26 @@
+# UI/UX prototype — repo terpisah di GitHub
+docs/UI:UX/
+
+# Backend
+stms-backend/node_modules/
+stms-backend/.env
+stms-backend/storage/
+stms-backend/src/generated/
+
+# Frontend
+stms-frontend/node_modules/
+stms-frontend/dist/
+stms-frontend/.env
+stms-frontend/.env.local
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.sw?
+
+# Logs
+*.log

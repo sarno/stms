@@ -70,8 +70,8 @@
           <tr v-if="filtered.length === 0">
             <td colspan="6" class="text-center py-12 text-slate-400">Tidak ada data peserta</td>
           </tr>
-          <tr v-for="(a, i) in filtered" :key="a.id" class="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
-            <td class="px-4 py-3 text-slate-400">{{ i + 1 }}</td>
+          <tr v-for="(a, i) in paginatedItems" :key="a.id" class="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
+            <td class="px-4 py-3 text-slate-400">{{ (currentPage - 1) * 10 + Number(i) + 1 }}</td>
             <td class="px-4 py-3 font-medium text-slate-800">{{ a.name }}</td>
             <td class="px-4 py-3 font-mono text-slate-500">{{ a.regNo }}</td>
             <td class="px-4 py-3 text-slate-600">{{ a.check_in || '-' }}</td>
@@ -89,15 +89,18 @@
           </tr>
         </tbody>
       </table>
+      <Pagination v-model:currentPage="currentPage" :totalItems="totalItems" :pageSize="10" />
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import axios from 'axios'
 import Badge from '@/components/ui/Badge.vue'
 import StatCard from '@/components/ui/StatCard.vue'
+import { usePagination } from '@/composables/usePagination'
+import Pagination from '@/components/ui/Pagination.vue'
 import { CheckCircle, Clock, XCircle, Search, RefreshCw } from 'lucide-vue-next'
 
 interface AttendeeRow {
@@ -123,6 +126,10 @@ const filtered = computed(() => {
   const q = search.value.toLowerCase()
   return attendees.value.filter(a => !q || a.name.toLowerCase().includes(q) || a.regNo.toLowerCase().includes(q))
 })
+
+const { currentPage, totalItems, paginatedItems, resetPage } = usePagination(filtered, 10)
+
+watch(search, () => resetPage())
 
 const counts = computed(() => ({
   present: attendees.value.filter(a => a.status === 'PRESENT').length,
