@@ -1,0 +1,39 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: stms-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER:-stms}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-stms_secret}
+      POSTGRES_DB: ${DB_NAME:-stms}
+    volumes:
+      - stms-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-stms} -d ${DB_NAME:-stms}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build: .
+    container_name: stms-app
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://${DB_USER:-stms}:${DB_PASSWORD:-stms_secret}@db:5432/${DB_NAME:-stms}
+      JWT_SECRET: ${JWT_SECRET}
+      BASE_URL: ${BASE_URL:-https://stms.example.com}
+    volumes:
+      - stms-uploads:/app/storage/uploads
+      - stms-certs:/app/storage/secure_certs
+    ports:
+      - "127.0.0.1:3000:3000"
+
+volumes:
+  stms-pgdata:
+  stms-uploads:
+  stms-certs:

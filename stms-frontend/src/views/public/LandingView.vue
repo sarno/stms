@@ -351,7 +351,6 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
-import { useRouter } from 'vue-router'
 import axios from 'axios'
 import {
   Shield, ArrowRight, Search, CheckCircle, ChevronRight,

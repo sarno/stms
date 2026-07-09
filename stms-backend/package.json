@@ -5,10 +5,13 @@
   "private": true,
   "scripts": {
     "dev": "bun --hot src/index.ts",
-    "start": "bun src/index.ts",
+    "start": "NODE_ENV=production bun src/index.ts",
+    "build:frontend": "cd ../stms-frontend && bun install && bun run build",
+    "build": "bun run build:frontend && bun run db:generate",
     "db:migrate": "bun prisma migrate dev",
     "db:seed": "bun prisma/seed.ts",
     "db:generate": "bun prisma generate",
+    "db:migrate:prod": "bun prisma migrate deploy",
     "test": "bun test src/tests/api.test.ts"
   },
   "devDependencies": {
