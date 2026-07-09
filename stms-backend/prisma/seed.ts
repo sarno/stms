@@ -234,7 +234,9 @@ async function main() {
           certificateNumber: c.certNo,
           verificationToken: token,
           filePath: `/storage/secure_certs/cert_${token}.pdf`,
+          issuedById: admin.id,
           poldaApproverId: polda.id,
+          signedAt: new Date(),
         },
       });
     }

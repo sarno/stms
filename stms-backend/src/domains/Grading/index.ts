@@ -40,7 +40,7 @@ export const gradingRoutes = new Elysia({ prefix: "/api/v1/grades" })
         return { error: "Token tidak ditemukan" };
       }
       const payload = await jwt.verify(authHeader.slice(7));
-      if (!payload || payload.role !== "ADMIN_PUSDIKLAT") {
+      if (!payload || !["ADMIN_PUSDIKLAT", "POLDA_VERIFICATOR"].includes(payload.role as string)) {
         set.status = 403;
         return { error: "Akses ditolak" };
       }

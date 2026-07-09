@@ -171,7 +171,7 @@ export const certRoutes = new Elysia({ prefix: "/api/v1/certificates" })
           verificationToken,
           filePath,
           issuedAt,
-          poldaApproverId: payload.sub as string,
+          issuedById: payload.sub as string,
         },
       });
 
@@ -184,11 +184,6 @@ export const certRoutes = new Elysia({ prefix: "/api/v1/certificates" })
           ipAddress: headers["x-forwarded-for"] as string || "unknown",
         },
       });
-
-      await waService.sendMessage(
-        registrant.user.phoneNumber,
-        `Selamat ${registrant.user.name}! 🎓\n\nIjazah Anda pada *${registrant.batch.batchName}* telah resmi diterbitkan.\n\n📄 No. Ijazah: *${certificate_number}*\n🔗 Verifikasi: ${BASE_URL}/verify/${verificationToken}\n\n_STMS - Security Training Management System_`
-      );
 
       set.status = 201;
       return {
@@ -261,6 +256,7 @@ export const certRoutes = new Elysia({ prefix: "/api/v1/certificates" })
               batch: { select: { batchName: true } },
             },
           },
+          issuedBy: { select: { name: true } },
           poldaApprover: { select: { name: true } },
         },
         orderBy: { issuedAt: "desc" },
@@ -274,8 +270,75 @@ export const certRoutes = new Elysia({ prefix: "/api/v1/certificates" })
         issueDate: c.issuedAt,
         verificationToken: c.verificationToken,
         filePath: c.filePath,
-        approver: c.poldaApprover.name,
+        issuedBy: c.issuedBy.name,
+        approver: c.poldaApprover?.name || null,
+        signedAt: c.signedAt,
       }));
+    }
+  )
+  .post(
+    "/:id/sign",
+    async ({ params, jwt, set, headers }) => {
+      const authHeader = headers["authorization"];
+      if (!authHeader?.startsWith("Bearer ")) {
+        set.status = 401;
+        return { error: "Token tidak ditemukan" };
+      }
+      const payload = await jwt.verify(authHeader.slice(7));
+      if (!payload || payload.role !== "POLDA_VERIFICATOR") {
+        set.status = 403;
+        return { error: "Akses ditolak — hanya POLDA_VERIFICATOR yang dapat menandatangani" };
+      }
+
+      const cert = await prisma.certificate.findUnique({
+        where: { id: params.id },
+        include: {
+          registrant: {
+            include: {
+              user: { select: { name: true, phoneNumber: true } },
+              batch: { select: { batchName: true } },
+            },
+          },
+        },
+      });
+
+      if (!cert) {
+        set.status = 404;
+        return { error: "Ijazah tidak ditemukan" };
+      }
+
+      if (cert.poldaApproverId) {
+        set.status = 409;
+        return { error: "Ijazah sudah ditandatangani sebelumnya" };
+      }
+
+      const updated = await prisma.certificate.update({
+        where: { id: params.id },
+        data: {
+          poldaApproverId: payload.sub as string,
+          signedAt: new Date(),
+        },
+      });
+
+      await prisma.auditTrail.create({
+        data: {
+          userId: payload.sub as string,
+          action: "SIGN_CERTIFICATE",
+          tableName: "certificates",
+          afterData: { certificate_id: updated.id, certificate_number: updated.certificateNumber },
+          ipAddress: headers["x-forwarded-for"] as string || "unknown",
+        },
+      });
+
+      await waService.sendMessage(
+        cert.registrant.user.phoneNumber,
+        `Selamat ${cert.registrant.user.name}! 🎓\n\nIjazah Anda pada *${cert.registrant.batch.batchName}* telah resmi diterbitkan dan ditandatangani.\n\n📄 No. Ijazah: *${cert.certificateNumber}*\n🔗 Verifikasi: ${BASE_URL}/verify/${cert.verificationToken}\n\n_STMS - Security Training Management System_`
+      );
+
+      return {
+        message: "Ijazah berhasil ditandatangani",
+        signedAt: updated.signedAt,
+      };
     }
   );
 

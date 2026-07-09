@@ -5,6 +5,11 @@ const router = createRouter({
   history: createWebHistory(),
   routes: [
     {
+      path: '/',
+      name: 'landing',
+      component: () => import('@/views/public/LandingView.vue'),
+    },
+    {
       path: '/login',
       name: 'login',
       component: () => import('@/views/auth/LoginView.vue'),
@@ -26,7 +31,7 @@ const router = createRouter({
       component: () => import('@/views/registration/PublicRegistrationView.vue'),
     },
     {
-      path: '/',
+      path: '/app',
       component: () => import('@/components/layout/AppLayout.vue'),
       meta: { requiresAuth: true },
       children: [

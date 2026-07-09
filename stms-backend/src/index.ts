@@ -14,6 +14,7 @@ import { dashboardRoutes } from "./domains/Training/dashboard";
 import { financeRoutes } from "./domains/Finance";
 import { reportsRoutes } from "./domains/Reports";
 import { roleRoutes } from "./domains/Roles";
+import { publicRoutes } from "./domains/Public";
 import { waService } from "./shared/whatsapp";
 
 export const app = new Elysia()
@@ -37,6 +38,7 @@ export const app = new Elysia()
   .use(financeRoutes)
   .use(reportsRoutes)
   .use(roleRoutes)
+  .use(publicRoutes)
   .get("/storage/uploads/*", async ({ params, set }) => {
     const filePath = join(process.cwd(), "storage", "uploads", params["*"]);
     const file = Bun.file(filePath);

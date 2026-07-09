@@ -46,12 +46,21 @@
               <span v-else class="text-gray-400 text-xs">Belum diterbitkan</span>
             </td>
             <td class="px-4 py-3 text-center">
-              <button v-if="!r.certificate" @click="openIssue(r)"
-                class="text-xs bg-slate-900 hover:bg-slate-700 text-white px-3 py-1.5 rounded-lg transition-colors">
-                Terbitkan Ijazah
+              <button v-if="r.certificate && !r.certificate.poldaApproverId" @click="signCertificate(r.certificate)"
+                :disabled="signing"
+                class="text-xs bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50">
+                {{ signing ? 'Memproses...' : 'Tandatangani' }}
               </button>
-              <a v-else :href="`/verify/${r.certificate?.verificationToken}`" target="_blank"
-                class="text-xs text-blue-600 hover:underline">Verifikasi</a>
+              <div v-else-if="r.certificate && r.certificate.poldaApproverId" class="flex items-center justify-center gap-1.5">
+                <span class="bg-emerald-100 text-emerald-700 px-2 py-1 rounded-full text-xs font-medium">Sudah Ditandatangani</span>
+                <button @click="downloadCert(r.certificate)"
+                  class="text-xs bg-slate-900 hover:bg-slate-700 text-white px-2.5 py-1.5 rounded-lg transition-colors cursor-pointer">
+                  Download PDF
+                </button>
+                <a :href="`/verify/${r.certificate?.verificationToken}`" target="_blank"
+                  class="text-xs text-blue-600 hover:underline">Verifikasi</a>
+              </div>
+              <span v-else class="text-gray-400 text-xs">—</span>
             </td>
           </tr>
           <tr v-if="graduates.length === 0">
@@ -62,23 +71,6 @@
       <Pagination v-model:currentPage="currentPage" :totalItems="totalItems" :pageSize="10" />
     </div>
 
-    <div v-if="issueModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div class="bg-white rounded-xl p-6 w-full max-w-md shadow-xl">
-        <h3 class="font-semibold text-gray-800 mb-1">Terbitkan Ijazah</h3>
-        <p class="text-sm text-gray-500 mb-4">Peserta: <strong>{{ issueTarget?.user.name }}</strong></p>
-        <label class="block text-sm font-medium text-gray-700 mb-1">Nomor Ijazah Kedinasan</label>
-        <input v-model="certNumber" type="text" placeholder="Contoh: POLDA/2026/001"
-          class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-500 mb-4" />
-        <p v-if="issueError" class="text-red-500 text-sm mb-3">{{ issueError }}</p>
-        <div class="flex gap-3 justify-end">
-          <button @click="issueModal = false" class="text-sm px-4 py-2 rounded-lg border border-gray-300 hover:bg-gray-50">Batal</button>
-          <button @click="confirmIssue" :disabled="issuing"
-            class="text-sm px-4 py-2 rounded-lg bg-slate-900 hover:bg-slate-700 disabled:opacity-50 text-white">
-            {{ issuing ? 'Memproses...' : 'Terbitkan' }}
-          </button>
-        </div>
-      </div>
-    </div>
   </div>
 </template>
 
@@ -97,11 +89,7 @@ const { currentPage, totalItems, paginatedItems, resetPage } = usePagination(fil
 
 const selectedBatch = ref('')
 const loading = ref(false)
-const issueModal = ref(false)
-const issueTarget = ref<any>(null)
-const certNumber = ref('')
-const issueError = ref('')
-const issuing = ref(false)
+const signing = ref(false)
 
 watch(selectedBatch, () => resetPage())
 
@@ -121,31 +109,24 @@ async function loadGraduates() {
   }
 }
 
-function openIssue(r: any) {
-  issueTarget.value = r
-  certNumber.value = ''
-  issueError.value = ''
-  issueModal.value = true
-}
-
-async function confirmIssue() {
-  if (!certNumber.value.trim()) {
-    issueError.value = 'Nomor ijazah wajib diisi.'
-    return
-  }
-  issuing.value = true
-  issueError.value = ''
+async function signCertificate(cert: any) {
+  signing.value = true
   try {
-    await axios.post('/api/v1/polda/issue-certificate', {
-      registrant_id: issueTarget.value.id,
-      certificate_number: certNumber.value,
-    })
-    issueModal.value = false
+    await axios.post(`/api/v1/polda/certificates/${cert.id}/sign`)
     await loadGraduates()
   } catch (e: any) {
-    issueError.value = e.response?.data?.error || 'Gagal menerbitkan ijazah.'
+    alert(e.response?.data?.error || 'Gagal menandatangani ijazah.')
   } finally {
-    issuing.value = false
+    signing.value = false
   }
+}
+
+function downloadCert(cert: any) {
+  axios.get(`/api/v1/certificates/download/${cert.id}`, { responseType: 'blob' }).then(res => {
+    const url = URL.createObjectURL(res.data)
+    const a = document.createElement('a')
+    a.href = url; a.download = `ijazah_${cert.certificateNumber}.pdf`; a.click()
+    URL.revokeObjectURL(url)
+  })
 }
 </script>

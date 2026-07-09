@@ -63,7 +63,7 @@ import {
   LayoutDashboard, Users, UserPlus, GraduationCap, BookOpen,
   Calendar, ClipboardCheck, Award, Settings,
   Building2, Layers, BookMarked, BarChart3,
-  Users2, Star, ScanLine, Key, ListChecks, Wallet,
+  Users2, Star, ScanLine, Key, ListChecks, Wallet, ShieldCheck,
 } from 'lucide-vue-next'
 
 const props = defineProps<{ currentPage: string }>()
@@ -123,6 +123,7 @@ const navConfig = [
     section: 'Sertifikat',
     items: [
       { icon: Award, label: 'Kelola Sertifikat', page: 'certificates' },
+      { icon: ShieldCheck, label: 'Approval Ijazah', page: 'polda-approval' },
       { icon: ScanLine, label: 'Verifikasi Publik', page: 'verification' },
     ],
   },
@@ -163,7 +164,7 @@ const visibleNav = computed(() => {
 
 function logout() {
   auth.logout()
-  router.push({ name: 'login' })
+  router.push({ name: 'landing' })
 }
 </script>
 

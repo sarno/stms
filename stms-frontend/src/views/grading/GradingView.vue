@@ -29,6 +29,13 @@
 
     <template v-else>
       <div class="flex gap-1 overflow-x-auto bg-slate-100 p-1 rounded-xl" style="scrollbar-width:none">
+        <button
+          v-for="s in ['Teori', 'Fisik', 'Khusus']" :key="s"
+          @click="activeSubject = s"
+          :class="['px-4 py-2 text-xs rounded-lg whitespace-nowrap transition-colors font-bold cursor-pointer', activeSubject === s ? 'bg-white text-blue-700 shadow-sm' : 'text-slate-500 hover:text-slate-700']">
+          {{ s }}
+        </button>
+        <div class="w-px bg-slate-200 mx-0.5 self-stretch" />
         <button v-for="s in subjectList" :key="s" @click="activeSubject = s"
           :class="['px-4 py-2 text-xs rounded-lg whitespace-nowrap transition-colors font-bold cursor-pointer', activeSubject === s ? 'bg-white text-blue-700 shadow-sm' : 'text-slate-500 hover:text-slate-700']">
           {{ s }}
@@ -250,6 +257,9 @@ interface ParticipantRow {
   id: string
   name: string
   regNo: string
+  theoryScore: number
+  physicalScore: number
+  specialSkillsScore: number
   subjectScores: Record<string, number>
 }
 
@@ -273,24 +283,43 @@ const { currentPage, totalItems, paginatedItems, resetPage } = usePagination(par
 
 watch(selectedBatch, () => resetPage())
 
+const CATEGORY_MAP: Record<string, keyof ParticipantRow> = {
+  Teori: 'theoryScore',
+  Fisik: 'physicalScore',
+  Khusus: 'specialSkillsScore',
+}
+
 function getScore(p: ParticipantRow, subject: string): number | null {
+  const key = CATEGORY_MAP[subject]
+  if (key) return p[key] ?? null
   return p.subjectScores?.[subject] ?? null
 }
 
+function allScores(p: ParticipantRow): number[] {
+  const vals = [p.theoryScore, p.physicalScore, p.specialSkillsScore, ...Object.values(p.subjectScores)]
+  return vals.filter(v => v > 0)
+}
+
 function hasAnyScore(p: ParticipantRow) {
-  return Object.values(p.subjectScores).some(v => v > 0)
+  return allScores(p).length > 0
 }
 
 function avgScore(p: ParticipantRow) {
-  const vals = Object.values(p.subjectScores).filter((v): v is number => v > 0)
+  const vals = allScores(p)
   if (!vals.length) return 0
-  return Math.round(vals.reduce((a: number, b: number) => a + b, 0) / vals.length)
+  return Math.round(vals.reduce((a, b) => a + b, 0) / vals.length)
 }
 
 function updateScore(p: ParticipantRow, subject: string, val: string) {
   const n = parseInt(val)
   if (val === '' || (!isNaN(n) && n >= 0 && n <= 100)) {
-    p.subjectScores = { ...p.subjectScores, [subject]: val === '' ? 0 : n }
+    const score = val === '' ? 0 : n
+    const key = CATEGORY_MAP[subject]
+    if (key) {
+      p[key] = score
+    } else {
+      p.subjectScores = { ...p.subjectScores, [subject]: score }
+    }
   }
 }
 
@@ -305,9 +334,8 @@ function scoreClass(val: number | null) {
 function exportGrades() {
   const lines = [`Nilai - ${selectedBatch.value}`, '---']
   for (const p of participants.value) {
-    const vals = Object.values(p.subjectScores).filter((v): v is number => v > 0)
-    const avg = vals.length ? Math.round(vals.reduce((a: number, b: number) => a + b, 0) / vals.length) : '-'
-    lines.push(`${p.name} | ${p.regNo} | Rata-rata: ${avg} | Status: ${avg !== '-' && Number(avg) >= 70 ? 'LULUS' : avg !== '-' ? 'TIDAK LULUS' : 'BELUM'}`)
+    const avg = avgScore(p)
+    lines.push(`${p.name} | ${p.regNo} | Teori: ${p.theoryScore} | Fisik: ${p.physicalScore} | Khusus: ${p.specialSkillsScore} | Rata-rata: ${avg || '-'} | Status: ${avg >= 70 ? 'LULUS' : avg > 0 ? 'TIDAK_LULUS' : 'BELUM'}`)
   }
   const blob = new Blob([lines.join('\n')], { type: 'text/plain' })
   const url = URL.createObjectURL(blob)
@@ -337,6 +365,9 @@ async function loadGrades() {
         id: r.id,
         name: r.user?.name || '-',
         regNo: `REG-${String(r.id).slice(0, 8).toUpperCase()}`,
+        theoryScore: g?.theoryScore ? Number(g.theoryScore) : 0,
+        physicalScore: g?.physicalScore ? Number(g.physicalScore) : 0,
+        specialSkillsScore: g?.specialSkillsScore ? Number(g.specialSkillsScore) : 0,
         subjectScores: typeof subjScores === 'object' ? subjScores : {},
       }
     })
@@ -348,6 +379,11 @@ async function loadGrades() {
   }
 }
 
+function calcAvg(scores: Record<string, number>) {
+  const vals = Object.values(scores).filter(v => v > 0)
+  return vals.length ? Math.round(vals.reduce((a, b) => a + b, 0) / vals.length) : 0
+}
+
 async function saveGrades() {
   saving.value = true
   saveError.value = ''
@@ -355,16 +391,16 @@ async function saveGrades() {
   try {
     await Promise.all(participants.value.map(p =>
       axios.put(`/api/v1/grades/${p.id}`, {
-        theory_score: 0,
-        physical_score: 0,
-        special_skills_score: 0,
+        theory_score: p.theoryScore || 0,
+        physical_score: p.physicalScore || 0,
+        special_skills_score: p.specialSkillsScore || 0,
         subject_scores: p.subjectScores,
       })
     ))
     saveSuccess.value = true
     setTimeout(() => { saveSuccess.value = false }, 3000)
   } catch (e: any) {
-    saveError.value = e?.response?.data?.message || 'Gagal menyimpan nilai'
+    saveError.value = e?.response?.data?.error || e?.response?.data?.message || 'Gagal menyimpan nilai'
   } finally {
     saving.value = false
   }
@@ -531,12 +567,16 @@ async function doImport() {
       for (const [subj, val] of Object.entries(m.values)) {
         if (val > 0) merged[subj] = val
       }
+      const avg = calcAvg(merged)
       await axios.put(`/api/v1/grades/${p.id}`, {
-        theory_score: 0,
-        physical_score: 0,
-        special_skills_score: 0,
+        theory_score: avg,
+        physical_score: avg,
+        special_skills_score: avg,
         subject_scores: merged,
       })
+      p.theoryScore = avg
+      p.physicalScore = avg
+      p.specialSkillsScore = avg
       p.subjectScores = merged
       done++
       importProgress.value = done

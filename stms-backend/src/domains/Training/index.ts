@@ -50,7 +50,7 @@ export const poldaRoutes = new Elysia({ prefix: "/api/v1/polda" })
         include: {
           user: { select: { name: true, email: true } },
           grade: true,
-          certificate: { select: { id: true, certificateNumber: true, issuedAt: true } },
+          certificate: { select: { id: true, certificateNumber: true, verificationToken: true, issuedAt: true, poldaApproverId: true, signedAt: true } },
         },
         orderBy: { createdAt: "asc" },
       });
@@ -144,6 +144,33 @@ export const poldaRoutes = new Elysia({ prefix: "/api/v1/polda" })
         message: `${succeeded} dari ${registrant_ids.length} sertifikat berhasil diterbitkan`,
         results,
       };
+    }
+  )
+  .post(
+    "/certificates/:id/sign",
+    async ({ params, jwt, set, headers }) => {
+      const authHeader = headers["authorization"];
+      if (!authHeader?.startsWith("Bearer ")) {
+        set.status = 401;
+        return { error: "Token tidak ditemukan" };
+      }
+      const payload = await jwt.verify(authHeader.slice(7));
+      if (!payload || payload.role !== "POLDA_VERIFICATOR") {
+        set.status = 403;
+        return { error: "Akses ditolak" };
+      }
+
+      const res = await fetch(`http://localhost:3000/api/v1/certificates/${params.id}/sign`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: authHeader,
+        },
+      });
+
+      const data = await res.json();
+      set.status = res.status as any;
+      return data;
     }
   )
   .patch(
