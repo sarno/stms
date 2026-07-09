@@ -98,13 +98,13 @@ export const userRoutes = new Elysia({ prefix: "/api/v1/users" })
     const payload = await jwt.verify(authHeader.slice(7));
     if (!payload || payload.role !== "ADMIN_PUSDIKLAT") { set.status = 403; return { error: "Akses ditolak" }; }
 
-    const { name, email, password, role, phone_number } = body as any;
+    const { name, email, password, role, phoneNumber } = body as any;
     const existing = await prisma.user.findUnique({ where: { email } });
     if (existing) { set.status = 409; return { error: "Email sudah terdaftar" }; }
 
     const passwordHash = await bcrypt.hash(password, 10);
     const user = await prisma.user.create({
-      data: { name, email, passwordHash, role, phoneNumber: phone_number },
+      data: { name, email, passwordHash, role, phoneNumber },
       select: { id: true, name: true, email: true, role: true, phoneNumber: true, createdAt: true },
     });
     set.status = 201;
@@ -116,8 +116,8 @@ export const userRoutes = new Elysia({ prefix: "/api/v1/users" })
     const payload = await jwt.verify(authHeader.slice(7));
     if (!payload || payload.role !== "ADMIN_PUSDIKLAT") { set.status = 403; return { error: "Akses ditolak" }; }
 
-    const { name, email, role, phone_number, password } = body as any;
-    const updateData: any = { name, email, role, phoneNumber: phone_number };
+    const { name, email, role, phoneNumber, password } = body as any;
+    const updateData: any = { name, email, role, phoneNumber };
     if (password) updateData.passwordHash = await bcrypt.hash(password, 10);
 
     const user = await prisma.user.update({

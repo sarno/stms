@@ -58,22 +58,22 @@ async function main() {
   const batch1 = await prisma.trainingBatch.upsert({
     where: { id: "00000000-0000-0000-0000-000000000001" },
     update: {},
-    create: { id: "00000000-0000-0000-0000-000000000001", batchName: "Gada Pratama Angkatan 001/2024", startDate: new Date("2024-01-08"), endDate: new Date("2024-02-16"), quota: 40, status: "COMPLETED" },
+    create: { id: "00000000-0000-0000-0000-000000000001", batchName: "Gada Pratama Angkatan 001/2024", type: "Satpam Umum", startDate: new Date("2024-01-08"), endDate: new Date("2024-02-16"), quota: 40, status: "COMPLETED" },
   });
   const batch2 = await prisma.trainingBatch.upsert({
     where: { id: "00000000-0000-0000-0000-000000000002" },
     update: {},
-    create: { id: "00000000-0000-0000-0000-000000000002", batchName: "Gada Pratama Angkatan 002/2024", startDate: new Date("2024-03-04"), endDate: new Date("2024-04-12"), quota: 40, status: "COMPLETED" },
+    create: { id: "00000000-0000-0000-0000-000000000002", batchName: "Gada Pratama Angkatan 002/2024", type: "Satpam Umum", startDate: new Date("2024-03-04"), endDate: new Date("2024-04-12"), quota: 40, status: "COMPLETED" },
   });
   const batch3 = await prisma.trainingBatch.upsert({
     where: { id: "00000000-0000-0000-0000-000000000003" },
     update: {},
-    create: { id: "00000000-0000-0000-0000-000000000003", batchName: "Gada Madya Angkatan 003/2024", startDate: new Date("2024-06-03"), endDate: new Date("2024-07-12"), quota: 30, status: "ONGOING" },
+    create: { id: "00000000-0000-0000-0000-000000000003", batchName: "Gada Madya Angkatan 003/2024", type: "Gada Madya", startDate: new Date("2024-06-03"), endDate: new Date("2024-07-12"), quota: 30, status: "ONGOING" },
   });
   const batch4 = await prisma.trainingBatch.upsert({
     where: { id: "00000000-0000-0000-0000-000000000004" },
     update: {},
-    create: { id: "00000000-0000-0000-0000-000000000004", batchName: "Gada Utama Angkatan 004/2024", startDate: new Date("2024-09-02"), endDate: new Date("2024-10-11"), quota: 35, status: "OPEN" },
+    create: { id: "00000000-0000-0000-0000-000000000004", batchName: "Gada Utama Angkatan 004/2024", type: "Satpam VIP", startDate: new Date("2024-09-02"), endDate: new Date("2024-10-11"), quota: 35, status: "OPEN" },
   });
 
   console.log("✅ Training Batches: 4 created");
@@ -92,26 +92,38 @@ async function main() {
       create: r,
     });
   }
+  const rateMap = new Map(rateData.map(r => [r.trainingType, r.amount]));
   console.log("✅ Service Rates: 3 created");
+
+  // ─── ROLES ─────────────────────────────────────────────────────────────────
+  const roleSeed = [
+    { name: "ADMIN_PUSDIKLAT", description: "Akses penuh ke seluruh fitur dan konfigurasi sistem termasuk manajemen pengguna dan audit log.", permissions: ["dashboard.view","masterdata.manage","participant.manage","registration.manage","document.verify","batch.manage","schedule.manage","attendance.manage","grade.manage","graduation.manage","certificate.manage","verification.view","finance.rates","finance.payments","finance.reports","report.view","user.manage","role.view","audit.view","setting.manage"] },
+    { name: "POLDA_VERIFICATOR", description: "Verifikasi data kelulusan, approve sertifikat, dan memantau data peserta dari tingkat Polda.", permissions: ["dashboard.view","participant.view","batch.view","grade.approve","graduation.approve","certificate.issue","verification.view","audit.view"] },
+    { name: "PESERTA", description: "Akses terbatas untuk melihat data diri, mendaftar pelatihan, jadwal, nilai, dan status sertifikat.", permissions: ["dashboard.view","registration.apply","schedule.view","grade.view","certificate.view","verification.view"] },
+  ];
+  for (const r of roleSeed) {
+    await prisma.role.upsert({ where: { name: r.name }, update: r, create: r });
+  }
+  console.log("✅ Roles: 3 created");
 
   // ─── REGISTRANTS ──────────────────────────────────────────────────────────
   const registrantConfigs = [
-    // ANG-001 (COMPLETED) — peserta 6,7 (graduated)
-    { userIdx: 6, batch: batch1, ktp: "3274011507860007", edu: "SMA/SMK", status: "APPROVED", payment: "PAID", docs: { ktp: "/storage/uploads/ktp_007.jpg", skck: "/storage/uploads/skck_007.pdf", foto: "/storage/uploads/foto_007.jpg" } },
-    // ANG-002 (COMPLETED) — peserta 2,3 (graduated)
-    { userIdx: 2, batch: batch2, ktp: "3274011203880003", edu: "SMA/SMK", status: "APPROVED", payment: "PAID", docs: { ktp: "/storage/uploads/ktp_003.jpg", skck: "/storage/uploads/skck_003.pdf", foto: "/storage/uploads/foto_003.jpg" } },
-    { userIdx: 3, batch: batch2, ktp: "3274014509910004", edu: "D3", status: "APPROVED", payment: "PAID", docs: { ktp: "/storage/uploads/ktp_004.jpg", skck: "/storage/uploads/skck_004.pdf", foto: "/storage/uploads/foto_004.jpg" } },
-    // ANG-003 (ONGOING) — peserta 0,1,4,5,8,9,10,11
-    { userIdx: 0, batch: batch3, ktp: "3274011504890002", edu: "SMA/SMK", status: "APPROVED", payment: "PAID", docs: { ktp: "/storage/uploads/ktp_001.jpg", skck: "/storage/uploads/skck_001.pdf", foto: "/storage/uploads/foto_001.jpg" } },
-    { userIdx: 1, batch: batch3, ktp: "3274016708920001", edu: "S1", status: "APPROVED", payment: "PAID", docs: { ktp: "/storage/uploads/ktp_002.jpg", foto: "/storage/uploads/foto_002.jpg" } },
-    { userIdx: 4, batch: batch3, ktp: "3274011012870005", edu: "SMA/SMK", status: "APPROVED", payment: "PARTIAL", docs: { ktp: "/storage/uploads/ktp_005.jpg", skck: "/storage/uploads/skck_005.pdf" } },
-    { userIdx: 5, batch: batch3, ktp: "3274012801930006", edu: "D3", status: "APPROVED", payment: "PAID", docs: { ktp: "/storage/uploads/ktp_006.jpg", skck: "/storage/uploads/skck_006.pdf", foto: "/storage/uploads/foto_006.jpg" } },
-    { userIdx: 8, batch: batch3, ktp: "3274011908950009", edu: "SMA/SMK", status: "APPROVED", payment: "PAID", docs: { ktp: "/storage/uploads/ktp_009.jpg", skck: "/storage/uploads/skck_009.pdf", foto: "/storage/uploads/foto_009.jpg" } },
-    { userIdx: 9, batch: batch3, ktp: "3274015503920010", edu: "SMA/SMK", status: "APPROVED", payment: "PAID", docs: { ktp: "/storage/uploads/ktp_010.jpg", skck: "/storage/uploads/skck_010.pdf", foto: "/storage/uploads/foto_010.jpg" } },
-    { userIdx: 10, batch: batch3, ktp: "3274011207890011", edu: "SMA/SMK", status: "APPROVED", payment: "PARTIAL", docs: { ktp: "/storage/uploads/ktp_011.jpg" } },
-    { userIdx: 11, batch: batch3, ktp: "3274012904940012", edu: "D3", status: "APPROVED", payment: "PAID", docs: { ktp: "/storage/uploads/ktp_012.jpg", skck: "/storage/uploads/skck_012.pdf", foto: "/storage/uploads/foto_012.jpg" } },
-    // ANG-004 (OPEN) — peserta 7
-    { userIdx: 7, batch: batch4, ktp: "3274012203950008", edu: "SMA/SMK", status: "PENDING_VERIFICATION", payment: "UNPAID", docs: { ktp: "/storage/uploads/ktp_008.jpg" } },
+    // ANG-001 (COMPLETED, type "Satpam Umum") — peserta 6,7
+    { userIdx: 6, batch: batch1, ktp: "3274011507860007", edu: "SMA/SMK", status: "APPROVED", payment: "PAID", paymentDate: new Date("2024-01-05"), docs: { ktp: "/storage/uploads/ktp_007.jpg", skck: "/storage/uploads/skck_007.pdf", foto: "/storage/uploads/foto_007.jpg" } },
+    // ANG-002 (COMPLETED, type "Satpam Umum") — peserta 2,3
+    { userIdx: 2, batch: batch2, ktp: "3274011203880003", edu: "SMA/SMK", status: "APPROVED", payment: "PAID", paymentDate: new Date("2024-02-20"), docs: { ktp: "/storage/uploads/ktp_003.jpg", skck: "/storage/uploads/skck_003.pdf", foto: "/storage/uploads/foto_003.jpg" } },
+    { userIdx: 3, batch: batch2, ktp: "3274014509910004", edu: "D3", status: "APPROVED", payment: "PAID", paymentDate: new Date("2024-02-21"), docs: { ktp: "/storage/uploads/ktp_004.jpg", skck: "/storage/uploads/skck_004.pdf", foto: "/storage/uploads/foto_004.jpg" } },
+    // ANG-003 (ONGOING, type "Gada Madya")
+    { userIdx: 0, batch: batch3, ktp: "3274011504890002", edu: "SMA/SMK", status: "APPROVED", payment: "PAID", paymentDate: new Date("2024-05-20"), docs: { ktp: "/storage/uploads/ktp_001.jpg", skck: "/storage/uploads/skck_001.pdf", foto: "/storage/uploads/foto_001.jpg" } },
+    { userIdx: 1, batch: batch3, ktp: "3274016708920001", edu: "S1", status: "APPROVED", payment: "PAID", paymentDate: new Date("2024-05-22"), docs: { ktp: "/storage/uploads/ktp_002.jpg", foto: "/storage/uploads/foto_002.jpg" } },
+    { userIdx: 4, batch: batch3, ktp: "3274011012870005", edu: "SMA/SMK", status: "APPROVED", payment: "PARTIAL", paymentDate: new Date("2024-05-25"), docs: { ktp: "/storage/uploads/ktp_005.jpg", skck: "/storage/uploads/skck_005.pdf" } },
+    { userIdx: 5, batch: batch3, ktp: "3274012801930006", edu: "D3", status: "APPROVED", payment: "PAID", paymentDate: new Date("2024-05-18"), docs: { ktp: "/storage/uploads/ktp_006.jpg", skck: "/storage/uploads/skck_006.pdf", foto: "/storage/uploads/foto_006.jpg" } },
+    { userIdx: 8, batch: batch3, ktp: "3274011908950009", edu: "SMA/SMK", status: "APPROVED", payment: "PAID", paymentDate: new Date("2024-05-19"), docs: { ktp: "/storage/uploads/ktp_009.jpg", skck: "/storage/uploads/skck_009.pdf", foto: "/storage/uploads/foto_009.jpg" } },
+    { userIdx: 9, batch: batch3, ktp: "3274015503920010", edu: "SMA/SMK", status: "APPROVED", payment: "PAID", paymentDate: new Date("2024-05-21"), docs: { ktp: "/storage/uploads/ktp_010.jpg", skck: "/storage/uploads/skck_010.pdf", foto: "/storage/uploads/foto_010.jpg" } },
+    { userIdx: 10, batch: batch3, ktp: "3274011207890011", edu: "SMA/SMK", status: "APPROVED", payment: "PARTIAL", paymentDate: new Date("2024-06-01"), docs: { ktp: "/storage/uploads/ktp_011.jpg" } },
+    { userIdx: 11, batch: batch3, ktp: "3274012904940012", edu: "D3", status: "APPROVED", payment: "PAID", paymentDate: new Date("2024-05-23"), docs: { ktp: "/storage/uploads/ktp_012.jpg", skck: "/storage/uploads/skck_012.pdf", foto: "/storage/uploads/foto_012.jpg" } },
+    // ANG-004 (OPEN, type "Satpam VIP")
+    { userIdx: 7, batch: batch4, ktp: "3274012203950008", edu: "SMA/SMK", status: "PENDING_VERIFICATION", payment: "UNPAID", paymentDate: null, docs: { ktp: "/storage/uploads/ktp_008.jpg" } },
   ];
 
   const registrants: any[] = [];
@@ -119,20 +131,26 @@ async function main() {
     const existing = await prisma.registrant.findFirst({
       where: { userId: pesertaUsers[cfg.userIdx].id, batchId: cfg.batch.id },
     });
+    const batchType = cfg.batch.type;
+    const baseAmount = rateMap.get(batchType) || 1500000;
+    const amount = cfg.payment === "PAID" ? baseAmount : cfg.payment === "PARTIAL" ? Math.round(baseAmount * 0.5) : null;
+    const data = {
+      userId: pesertaUsers[cfg.userIdx].id,
+      batchId: cfg.batch.id,
+      ktpNumber: cfg.ktp,
+      educationLevel: cfg.edu,
+      documentUrls: cfg.docs,
+      statusRegistration: cfg.status,
+      paymentStatus: cfg.payment,
+      paymentAmount: amount,
+      paymentDate: cfg.paymentDate,
+      paymentNote: cfg.payment === "PAID" ? "Lunas (transfer Bank BRI)" : cfg.payment === "PARTIAL" ? "DP 50% (tunai)" : null,
+    };
     if (!existing) {
-      const r = await prisma.registrant.create({
-        data: {
-          userId: pesertaUsers[cfg.userIdx].id,
-          batchId: cfg.batch.id,
-          ktpNumber: cfg.ktp,
-          educationLevel: cfg.edu,
-          documentUrls: cfg.docs,
-          statusRegistration: cfg.status,
-          paymentStatus: cfg.payment,
-        },
-      });
+      const r = await prisma.registrant.create({ data });
       registrants.push(r);
     } else {
+      await prisma.registrant.update({ where: { id: existing.id }, data });
       registrants.push(existing);
     }
   }
@@ -232,6 +250,9 @@ async function main() {
     { userId: admin.id, action: "CREATE", tableName: "training_batches", afterData: { batch: "ANG-004/2024", type: "Satpam Industri" }, ip: "192.168.1.10" },
     { userId: operator.id, action: "CREATE", tableName: "registrants", afterData: { name: "Hana Pertiwi Lestari" }, ip: "192.168.1.11" },
     { userId: admin.id, action: "APPROVE", tableName: "grades", afterData: { batch: "ANG-002/2024", count: 32 }, ip: "192.168.1.13" },
+    { userId: admin.id, action: "VERIFY_PAYMENT", tableName: "registrants", afterData: { registrant: "Ahmad Fauzi Rahmanto", paymentStatus: "PAID", paymentAmount: 2000000 }, ip: "192.168.1.10" },
+    { userId: operator.id, action: "VERIFY_PAYMENT", tableName: "registrants", afterData: { registrant: "Siti Nurhaliza Putri", paymentStatus: "PAID", paymentAmount: 2000000 }, ip: "192.168.1.11" },
+    { userId: admin.id, action: "VERIFY_PAYMENT", tableName: "registrants", afterData: { registrant: "Eko Prasetyo Nugroho", paymentStatus: "PARTIAL", paymentAmount: 1000000 }, ip: "192.168.1.12" },
     { userId: admin.id, action: "LOGIN", tableName: "users", afterData: { email: "admin@stms.id" }, ip: "192.168.1.10" },
     { userId: operator.id, action: "UPDATE", tableName: "registrants", afterData: { payment: "PAID", reg: "REG-006" }, ip: "192.168.1.12" },
     { userId: polda.id, action: "APPROVE", tableName: "certificates", afterData: { cert: "CERT-2024-0002", participant: "Budi Santoso" }, ip: "192.168.1.15" },
@@ -337,6 +358,7 @@ async function main() {
   console.log(`  Batches: 4 (2 COMPLETED, 1 ONGOING, 1 OPEN)`);
   console.log(`  Registrants: ${registrants.length}`);
   console.log(`  Certificates: ${certConfigs.length}`);
+  console.log(`  Service Rates: ${rateData.length}`);
 }
 
 main()

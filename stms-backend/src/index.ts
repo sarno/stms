@@ -12,6 +12,8 @@ import { masterdataRoutes } from "./domains/Training/masterdata";
 import { attendanceRoutes, scheduleRoutes } from "./domains/Training/attendance";
 import { dashboardRoutes } from "./domains/Training/dashboard";
 import { financeRoutes } from "./domains/Finance";
+import { reportsRoutes } from "./domains/Reports";
+import { roleRoutes } from "./domains/Roles";
 
 export const app = new Elysia()
   .use(jwt({ name: "jwt", secret: process.env.JWT_SECRET || "stms-jwt-secret-dev-2026" }))
@@ -32,6 +34,8 @@ export const app = new Elysia()
   .use(scheduleRoutes)
   .use(dashboardRoutes)
   .use(financeRoutes)
+  .use(reportsRoutes)
+  .use(roleRoutes)
   .get("/storage/uploads/*", async ({ params, set }) => {
     const filePath = join(process.cwd(), "storage", "uploads", params["*"]);
     const file = Bun.file(filePath);
