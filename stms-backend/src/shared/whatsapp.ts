@@ -6,6 +6,7 @@ import makeWASocket, {
 } from "@whiskeysockets/baileys";
 import { Boom } from "@hapi/boom";
 import { join } from "path";
+import qrcode from "qrcode-terminal";
 
 const SESSION_DIR = join(process.cwd(), "storage", "sessions", "wa");
 
@@ -23,7 +24,6 @@ class WhatsAppService {
         creds: state.creds,
         keys: makeCacheableSignalKeyStore(state.keys, console as any),
       },
-      printQRInTerminal: true,
       browser: ["STMS Server", "Chrome", "1.0.0"],
     });
 
@@ -33,7 +33,8 @@ class WhatsAppService {
       const { connection, lastDisconnect, qr } = update;
 
       if (qr) {
-        console.log("📱 Scan QR Code WhatsApp di atas untuk menghubungkan server.");
+        qrcode.generate(qr, { small: true });
+        console.log("📱 Scan QR Code di atas untuk menghubungkan WhatsApp.");
       }
 
       if (connection === "close") {

@@ -14,6 +14,7 @@ import { dashboardRoutes } from "./domains/Training/dashboard";
 import { financeRoutes } from "./domains/Finance";
 import { reportsRoutes } from "./domains/Reports";
 import { roleRoutes } from "./domains/Roles";
+import { waService } from "./shared/whatsapp";
 
 export const app = new Elysia()
   .use(jwt({ name: "jwt", secret: process.env.JWT_SECRET || "stms-jwt-secret-dev-2026" }))
@@ -47,4 +48,7 @@ export const app = new Elysia()
 if (import.meta.main) {
   app.listen(3000);
   console.log(`🛡️  STMS API running at http://localhost:${app.server?.port}`);
+  waService.connect().catch((err) => {
+    console.error("Gagal menghubungkan WhatsApp:", err);
+  });
 }
